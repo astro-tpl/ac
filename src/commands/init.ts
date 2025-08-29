@@ -4,14 +4,14 @@
 
 import { Command, Flags } from '@oclif/core'
 import { join } from 'node:path'
-import { writeYamlFile } from '../infra/yaml.js'
-import { fileExists } from '../infra/fs.js'
-import { logger } from '../infra/logger.js'
-import { DEFAULT_CONFIG, PROJECT_CONFIG_FILENAME, DEFAULT_TEST_REPO, DEFAULT_BRANCH } from '../config/constants.js'
-import { inferRepoAlias, normalizePath } from '../config/paths.js'
-import { normalizeGitUrl, isValidGitUrl } from '../infra/git.js'
-import { ProjectConfig, RepoConfig } from '../types/config.js'
-import { ConfigValidationError } from '../types/errors.js'
+import { writeYamlFile } from '../infra/yaml'
+import { fileExists } from '../infra/fs'
+import { logger } from '../infra/logger'
+import { DEFAULT_CONFIG, PROJECT_CONFIG_FILENAME, DEFAULT_TEST_REPO, DEFAULT_BRANCH } from '../config/constants'
+import { inferRepoAlias, normalizePath } from '../config/paths'
+import { normalizeGitUrl, isValidGitUrl } from '../infra/git'
+import { ProjectConfig, RepoConfig } from '../types/config'
+import { ConfigValidationError } from '../types/errors'
 
 export default class Init extends Command {
   static override description = '在当前目录生成 .ac.yaml 项目配置文件'

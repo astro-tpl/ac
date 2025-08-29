@@ -2,7 +2,7 @@
  * 日志和错误格式化工具
  */
 
-import { ACError } from '../types/errors.js'
+import { ACError } from '../types/errors'
 
 // 日志级别
 export enum LogLevel {

@@ -267,6 +267,7 @@ ac_project:
           repo: ""
           dest: "."
           mode: "write"
+          lang: "en"
     project_config_minimal:
       path: "./.ac.yaml"
       value:
@@ -280,6 +281,7 @@ ac_project:
           repo: "core"
           dest: "."
           mode: "write"
+          lang: "zh"
     prompt_template_minimal:
       value:
         version: "v1.0.0"
@@ -325,6 +327,11 @@ ac_project:
         - "typescript": "TS 编译"
         - "tsup": "打包（也可用 esbuild）"
         - "vitest": "单测"
+    tsconfig:
+      resolution:
+        - "@/* -> @/src/*"
+      allowJs: false
+      module: "CommonJS"
     package_json_fields:
       bin:
         ac: "bin/run"
@@ -397,3 +404,69 @@ ac_project:
       - "找不到模板 id → 友好错误并提示 `ac search`。"
       - "merge 非 JSON → 明确报错并建议使用 write/append。"
       - "仓库不存在或未配置 → 提示 `ac repo add` 或在 init 时写入。"
+
+  i18n_support:
+    purpose: >
+      CLI 在输出 log / 提示信息时，根据系统语言或配置文件中的默认语言来决定语言环境。
+      优先级：命令行 flag > 配置文件 defaults.lang > 系统环境变量 LANG/LC_ALL > 默认 en。
+    detection_order:
+      - ".ac.yaml 或 ~/.ac/config.yaml 中的 defaults.lang"
+      - "系统环境变量 LANG, LC_ALL, LC_MESSAGES"
+      - "默认 en"
+    config_key:
+      path: "defaults.lang"
+      type: "string"
+      example: "en 或 zh"
+    json_format:
+      en.json:
+        repo.add.success: "Repository {alias} added successfully."
+        repo.add.exists: "Repository {alias} already exists."
+        config.notfound: "No config file found, initializing default config..."
+        "...": "..."
+      zh.json:
+        repo.add.success: "仓库 {alias} 添加成功。"
+        repo.add.exists: "仓库 {alias} 已存在。"
+        config.notfound: "未找到配置文件，正在初始化默认配置..."
+        "...": "..."
+    translator_core:
+      code: |
+        // src/i18n/index.ts
+        import en from './en.json'
+        import zh from './zh.json'
+
+        type Dict = Record<string, string>
+        const dicts: Record<string, Dict> = { en, zh }
+
+        let current = 'en'
+
+        export function initI18n(lang?: string) {
+          if (lang && dicts[lang]) {
+            current = lang
+            return
+          }
+          const sysLang = process.env.LANG || process.env.LC_ALL || process.env.LC_MESSAGES || 'en'
+          const short = sysLang.split('.')[0].split('_')[0]  // e.g. "zh_CN.UTF-8" -> "zh"
+          current = dicts[short] ? short : 'en'
+        }
+
+        export function t(key: string, params?: Record<string, string>): string {
+          const template = dicts[current][key] || dicts['en'][key] || key
+          if (!params) return template
+          return Object.entries(params).reduce(
+            (msg, [k, v]) => msg.replace(`{${k}}`, v),
+            template
+          )
+        }
+    file_structure: |
+      src/
+      ├─ i18n/
+      │  ├─ en.json         # 英文文案
+      │  ├─ zh.json         # 中文文案
+      │  └─ index.ts        # i18n loader，读取 flag/config/env 并选择语言
+      └─ infra/
+         └─ logger.ts       # log 封装，内部调用 i18n.t()
+    usage_flow:
+      - "命令入口 parse flags"
+      - "resolveConfig() 读取配置文件，提取 defaults.lang"
+      - "initI18n(langFlag, config.defaults.lang, systemLang)"
+      - "logger.t(key, params) 输出对应语言"

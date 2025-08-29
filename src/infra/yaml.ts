@@ -3,8 +3,8 @@
  */
 
 import * as yaml from 'js-yaml'
-import { readFile, atomicWriteFile } from './fs.js'
-import { ConfigValidationError, TemplateValidationError } from '../types/errors.js'
+import { readFile, atomicWriteFile } from './fs'
+import { ConfigValidationError, TemplateValidationError } from '../types/errors'
 
 /**
  * 读取并解析 YAML 文件

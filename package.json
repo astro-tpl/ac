@@ -2,13 +2,14 @@
   "name": "ac",
   "version": "1.0.0",
   "description": "AI Context CLI - 统一管理 AI 编程上下文与提示词的命令行工具",
-  "keywords": ["ai", "context", "prompt", "cli", "template"],
+  "keywords": [
+    "oclif"
+  ],
   "homepage": "https://github.com/astro-tpl/ac",
   "bugs": "https://github.com/astro-tpl/ac/issues",
   "repository": "astro-tpl/ac",
   "license": "MIT",
   "author": "AstroTpl",
-  "type": "module",
   "exports": "./lib/index.js",
   "bin": {
     "ac": "./bin/run.js"
@@ -23,7 +24,8 @@
     "@oclif/core": "^3.15.1",
     "@oclif/plugin-help": "^6.0.8",
     "js-yaml": "^4.1.0",
-    "simple-git": "^3.20.0"
+    "simple-git": "^3.20.0",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@oclif/prettier-config": "^0.2.1",
@@ -67,9 +69,5 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "bugs": "https://github.com/astro-tpl/ac/issues",
-  "keywords": [
-    "oclif"
-  ],
   "types": "lib/index.d.ts"
 }

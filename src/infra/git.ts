@@ -3,9 +3,9 @@
  */
 
 import { simpleGit, SimpleGit, CleanOptions } from 'simple-git'
-import { ensureDir, fileExists, isDirectory } from './fs.js'
-import { GitOperationError } from '../types/errors.js'
-import { logger } from './logger.js'
+import { ensureDir, fileExists, isDirectory } from './fs'
+import { GitOperationError } from '../types/errors'
+import { logger } from './logger'
 
 /**
  * Git 仓库操作类

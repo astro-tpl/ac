@@ -4,7 +4,7 @@
 
 import { homedir } from 'node:os'
 import { resolve, dirname, join, isAbsolute } from 'node:path'
-import { PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR } from './constants.js'
+import { PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR } from './constants'
 
 /**
  * 展开路径中的 ~ 符号

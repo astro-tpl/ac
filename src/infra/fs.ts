@@ -4,8 +4,8 @@
 
 import { promises as fs } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { FILE_ENCODING, TEMP_FILE_SUFFIX } from '../config/constants.js'
-import { FileOperationError } from '../types/errors.js'
+import { FILE_ENCODING, TEMP_FILE_SUFFIX } from '../config/constants'
+import { FileOperationError } from '../types/errors'
 
 /**
  * 原子写入文件（先写临时文件，再重命名）

@@ -2,8 +2,8 @@
  * 版本兼容性校验工具
  */
 
-import { CURRENT_CONFIG_VERSION } from '../config/constants.js'
-import { VersionIncompatibleError } from '../types/errors.js'
+import { CURRENT_CONFIG_VERSION } from '../config/constants'
+import { VersionIncompatibleError } from '../types/errors'
 
 /**
  * 检查配置版本兼容性
