@@ -1,0 +1,75 @@
+{
+  "name": "ac",
+  "version": "1.0.0",
+  "description": "AI Context CLI - 统一管理 AI 编程上下文与提示词的命令行工具",
+  "keywords": ["ai", "context", "prompt", "cli", "template"],
+  "homepage": "https://github.com/astro-tpl/ac",
+  "bugs": "https://github.com/astro-tpl/ac/issues",
+  "repository": "astro-tpl/ac",
+  "license": "MIT",
+  "author": "AstroTpl",
+  "type": "module",
+  "exports": "./lib/index.js",
+  "bin": {
+    "ac": "./bin/run.js"
+  },
+  "files": [
+    "/bin",
+    "/lib",
+    "/npm-shrinkwrap.json",
+    "/oclif.manifest.json"
+  ],
+  "dependencies": {
+    "@oclif/core": "^3.15.1",
+    "@oclif/plugin-help": "^6.0.8",
+    "js-yaml": "^4.1.0",
+    "simple-git": "^3.20.0"
+  },
+  "devDependencies": {
+    "@oclif/prettier-config": "^0.2.1",
+    "@oclif/test": "^3.1.3",
+    "@types/js-yaml": "^4.0.8",
+    "@types/node": "^18",
+    "eslint": "^8.55.0",
+    "eslint-config-oclif": "^5.0.0",
+    "eslint-config-oclif-typescript": "^3.0.8",
+    "oclif": "^4.1.0",
+    "prettier": "^3.1.1",
+    "tsx": "^4.6.2",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0"
+  },
+  "oclif": {
+    "bin": "ac",
+    "dirname": "ac",
+    "commands": "./lib/commands",
+    "plugins": [
+      "@oclif/plugin-help"
+    ],
+    "topicSeparator": " ",
+    "topics": {
+      "repo": {
+        "description": "管理模板仓库"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint . --ext .ts",
+    "postpack": "rm -f oclif.manifest.json",
+    "posttest": "npm run lint",
+    "prepack": "npm run build && oclif manifest && oclif readme",
+    "test": "vitest",
+    "version": "oclif readme && git add README.md",
+    "dev": "tsx src/index.ts",
+    "clean": "rm -rf lib"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bugs": "https://github.com/astro-tpl/ac/issues",
+  "keywords": [
+    "oclif"
+  ],
+  "types": "lib/index.d.ts"
+}

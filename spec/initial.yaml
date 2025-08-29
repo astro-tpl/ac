@@ -1,0 +1,399 @@
+ac_project:
+  name: "ac (AI Context CLI)"
+  purpose: >
+    统一管理 AI 编程上下文与提示词的命令行工具。支持初始化项目配置、
+    管理模板仓库、搜索模板、以及将模板（context/prompt）应用到项目文件。
+    追求“极简规范、可移植、AI 友好”。
+
+  # ------------------------------------------------------------
+  # 全局参数（所有命令可共用的行为/旗标语义）
+  # ------------------------------------------------------------
+  global_args:
+    config_resolution:
+      description: >
+        读取配置的优先级：从当前目录开始逐级向上查找 `.ac.yaml`；
+        若未找到则读取 `~/.ac/config.yaml`；若加 `--global` 则直接使用 `~/.ac/config.yaml` 并忽略逐级查找。
+      flags:
+        - name: "--global"
+          effect: "强制使用并操作全局配置（~/.ac/config.yaml），忽略逐级查找。"
+    repo_selection:
+      description: >
+        需要选择模板来源仓库时，优先级为：`--repo` 显式指定 > 项目/全局配置中的 `defaults.repo` >
+        在所有已配置的 repos 中查找首个匹配。
+      flags:
+        - name: "--repo <alias>"
+          effect: "在多仓场景下显式指定模板来源仓库的别名（alias）。"
+    write_modes:
+      description: "落地模式：覆盖写入、末尾追加、JSON 浅合并（仅对 JSON 文件安全）。"
+      values: ["write", "append", "merge"]
+    safety:
+      description: "变更前预览，避免误写。"
+      flags:
+        - name: "--dry-run"
+          effect: "只展示将要修改的文件/模式/预览，不执行实际写入。"
+    search_filters:
+      description: "模板搜索的通用过滤器。"
+      flags:
+        - name: "--type <context|prompt>"
+          effect: "按类型过滤模板。"
+        - name: "-l, --label <label>"
+          repeatable: true
+          effect: "按标签过滤（默认 ANY 逻辑，后续可扩展 --match all）。"
+        - name: "--deep"
+          effect: "触发 ripgrep 对模板正文内容进行深度搜索。"
+
+  # ------------------------------------------------------------
+  # 命令（第一版仅保留 4 条）
+  # ------------------------------------------------------------
+  commands:
+    - name: "repo"
+      description: "管理模板仓库（子命令：list, add, update, remove）"
+      config_resolution: "遵循 global_args.config_resolution 优先级；支持 --global。"
+      subcommands:
+        - name: "list"
+          description: "列出当前有效配置中的 repos。"
+        - name: "add <git-url>"
+          description: "添加模板仓库到配置并克隆到本地缓存目录。"
+          flags:
+            - name: "--name <alias>"
+              optional: true
+              default_rule: "若省略，则以 git-url 最后路径段去掉 .git 作为 alias（例如 .../foo-bar.git → foo-bar）。"
+            - name: "--branch <branch>"
+              optional: true
+              default: "main"
+          behavior:
+            - "克隆到 ~/.ac/repos/<alias>（存在则尝试 git pull）。"
+            - "将仓库写入当前有效配置（项目或全局）中的 repos 列表。"
+            - "扫描仓库中的模板 YAML 并刷新索引。"
+        - name: "update [<alias>]"
+          description: "更新指定或全部仓库（git pull）并刷新索引。"
+        - name: "remove <alias>"
+          description: "从配置中移除仓库并可选择清理本地缓存目录（实现可提供确认提示）。"
+
+    - name: "init"
+      description: "在当前目录生成 `.ac.yaml`（项目配置）。"
+      flags:
+        - name: "--repo <git-url>"
+          optional: true
+          effect: "在初始化时顺带添加一个默认模板仓库。"
+        - name: "--name <alias>"
+          optional: true
+          effect: "为 --repo 指定 alias；未提供则按解析规则自动推断。"
+        - name: "--branch <branch>"
+          optional: true
+          default: "main"
+        - name: "--force"
+          optional: true
+          effect: "如已存在 .ac.yaml 则覆盖。"
+      output: ".ac.yaml（包含 repos 与 defaults）"
+      note: "不直接写任何 context 文件，仅写配置。"
+
+    - name: "apply"
+      description: "将模板应用到项目文件。支持 context/prompt/原始内容三种来源。"
+      config_resolution: "遵循 global_args.config_resolution；可用 --repo 指定仓库。"
+      sources:
+        - flag: "--context <id>"
+          effect: "加载类型为 context 的模板并按 targets 写入。"
+        - flag: "--prompt <id>"
+          effect: "加载类型为 prompt 的模板，将其 content 写入指定文件。"
+        - flag: "--content <file>"
+          effect: "使用本地文件的文本内容直接写入指定路径。"
+        - flag: "--stdin"
+          effect: "从标准输入读取要写入的文本。"
+      flags:
+        - name: "--dest <dirOrFile>"
+          effect: >
+            对 context：作为 targets[].path 的基准目录；
+            对 prompt/content/stdin：若为目录需配合 --filename 指定落地文件名，若为文件路径则直接写入该文件。
+        - name: "--filename <name>"
+          optional: true
+          effect: "当 --dest 是目录且来源为 prompt/content/stdin 时，指定落地文件名。"
+        - name: "--mode <write|append|merge>"
+          default: "write"
+        - name: "--dry-run"
+          default: false
+      interpolation:
+        supported_placeholders:
+          - "${repo.id}"
+        scope: "仅在 context.targets[].path 与 context.targets[].content 中有效。"
+        value_source: "取该模板的来源仓库 alias（即配置中 repos[].name）。"
+      dry_run_output: "打印将变更的目标路径、模式、是否存在、内容摘要；merge 显示 JSON 顶层 key 差异。"
+
+    - name: "search"
+      description: "按关键字/类型/标签搜索模板；必要时可深搜正文。"
+      config_resolution: "遵循 global_args.config_resolution；可跨多个仓库。"
+      args:
+        - name: "<keyword>"
+          optional: true
+          description: "关键字（可为空，仅用过滤器筛选）。"
+      flags:
+        - name: "--type <context|prompt>"
+        - name: "-l, --label <label>"
+          repeatable: true
+        - name: "--deep"
+      scoring:
+        head_fields_weight: 3   # id/name/labels/summary
+        content_weight: 1       # deep 模式时对 content 的命中分
+      output_format: "score  type  id  name — summary  [labels...]"
+
+  # ------------------------------------------------------------
+  # 配置文件（项目与全局）
+  # ------------------------------------------------------------
+  config_files:
+    project_config:
+      filename: ".ac.yaml"
+      resolution: "从当前目录逐级向上查找。"
+      schema:
+        version: 1
+        repos:
+          - name: "<alias>"
+            git: "<git-url>"
+            branch: "main"
+            path: "~/.ac/repos/<alias>"   # 可选；默认按规则拼接
+        defaults:
+          repo: "<alias or empty>"
+          dest: "."
+          mode: "write"
+    global_config:
+      filename: "~/.ac/config.yaml"
+      auto_init:
+        when_missing: true
+        default_value:
+          version: 1
+          repos: []
+          defaults:
+            repo: ""
+            dest: "."
+            mode: "write"
+
+  # ------------------------------------------------------------
+  # 仓库管理与索引
+  # ------------------------------------------------------------
+  repo_management:
+    local_cache: "~/.ac/repos/<alias>"
+    alias_rule: "git-url 最后路径段（去掉末尾 .git）作为默认 alias。"
+    index:
+      build: "扫描仓库中 **/*.y?(a)ml，解析模板头与正文，构建内存索引写到 ~/.ac/index.json 以加速。"
+      fields_indexed: ["id", "type", "name", "labels", "summary", "absPath"]
+      deep_search: "当 --deep 时使用 ripgrep 对 YAML 正文（content/targets.content）做全文检索。"
+
+  # ------------------------------------------------------------
+  # 模板规范（按类型区分）
+  # ------------------------------------------------------------
+  template_spec:
+    common_header:
+      id: "唯一模板 ID（字符串）"
+      type: "context | prompt"
+      name: "可读名称"
+      labels: ["任意标签，供搜索用"]
+      summary: "简要说明（单行或短段落）"
+
+    prompt:
+      description: "纯文本提示词模板，输出到 stdout 或通过 apply 写入文件。"
+      schema:
+        type: "prompt"
+        content: |
+          "这里是提示词纯文本；不做变量替换（除非未来扩展）。"
+      example:
+        id: "frontend-review-v1"
+        type: "prompt"
+        name: "前端代码评审（React）"
+        labels: ["frontend", "review", "react"]
+        summary: "面向 React 的代码评审提示词。"
+        content: |
+          你是资深前端工程师。请从可读性、可维护性、性能等角度审查以下代码……
+
+    context:
+      description: >
+        上下文模板：将一组目标文件写入项目。可在 path 与 content 中引用 `${repo.id}`；
+        允许复用 prompt 的内容（通过 apply 源或在 target 中声明引用）。
+      schema:
+        type: "context"
+        targets:
+          - path: "目标文件路径（可含 ${repo.id}）"
+            mode: "write | append | merge"
+            # 二选一或并用：
+            content: "原样写入的文本内容（可含 ${repo.id}）"
+            content_from_prompt: "<prompt-id>"   # 可选：复用已有 prompt 的 content
+            content_order: "content-first | prompt-first"   # 可选；默认 content-first；当同时提供 content 与 content_from_prompt 时拼接顺序
+      notes:
+        - "content_from_prompt 只取对应 prompt 的 `content` 字段。"
+        - "merge 仅保证对 JSON 文件的浅合并安全；YAML 合并可作为后续扩展。"
+      example:
+        id: "cursor-guards-v1"
+        type: "context"
+        name: "Cursor 基础守则"
+        labels: ["frontend", "rules", "cursor"]
+        summary: "限制 pages/components 直连 services/stores，强制经 hooks。"
+        targets:
+          - path: ".cursor/repos/${repo.id}/rules.md"
+            mode: "write"
+            content: |
+              # Cursor 规则（来源：${repo.id}）
+              - pages/components 禁止直接 import services/stores
+              - 统一从 src/hooks/* 引用业务逻辑
+          - path: ".claude/prompt.md"
+            mode: "write"
+            content_from_prompt: "frontend-review-v1"
+            content_order: "prompt-first"
+
+  # ------------------------------------------------------------
+  # 应用逻辑（核心流程）
+  # ------------------------------------------------------------
+  apply_logic:
+    steps:
+      - "解析配置：按 global_args.config_resolution 获取项目或全局配置；若全局不存在则自动初始化。"
+      - "解析来源：根据 --context / --prompt / --content / --stdin 选择内容来源。"
+      - "解析仓库：按 global_args.repo_selection 确定模板来源仓库 alias。"
+      - "加载模板：读取并解析模板 YAML（prompt/context）。"
+      - "插值处理：对 context 的 targets[].path 与 targets[].content 执行 `${repo.id}` 替换。"
+      - "内容组装：当 target 同时含 content 与 content_from_prompt 时，按 content_order 组装文本。"
+      - "dry-run：若启用，展示目标路径/模式/存在性/内容摘要或 JSON key 差异（merge）。"
+      - "落地写入：按 mode 执行 write/append/merge（merge 为 JSON 浅合并）。"
+    error_handling:
+      - "找不到指定模板 id：输出清晰错误并建议使用 `ac search`。"
+      - "merge 非 JSON 文件：提示不支持的合并类型并建议使用 write/append。"
+
+  # ------------------------------------------------------------
+  # 示例配置
+  # ------------------------------------------------------------
+  examples:
+    global_config_initial:
+      path: "~/.ac/config.yaml"
+      value:
+        version: 1
+        repos: []
+        defaults:
+          repo: ""
+          dest: "."
+          mode: "write"
+    project_config_minimal:
+      path: "./.ac.yaml"
+      value:
+        version: 1
+        repos:
+          - name: "core"
+            git: "https://github.com/your-org/ai-context-templates"
+            branch: "main"
+            path: "~/.ac/repos/core"
+        defaults:
+          repo: "core"
+          dest: "."
+          mode: "write"
+    prompt_template_minimal:
+      value:
+        version: "v1.0.0"
+        id: "frontend-review-v1"
+        type: "prompt"
+        name: "前端代码评审（React）"
+        labels: ["frontend", "review", "react"]
+        summary: "面向 React 的代码评审提示词。"
+        content: |
+          你是资深前端工程师。请从可读性、可维护性、性能等角度审查以下代码……
+    context_template_minimal:
+      value:
+        version: "v1.0.0"
+        id: "cursor-guards-v1"
+        type: "context"
+        name: "Cursor 基础守则"
+        labels: ["frontend", "rules", "cursor"]
+        summary: "限制 pages/components 直连 services/stores，强制经 hooks。"
+        targets:
+          - path: ".cursor/repos/${repo.id}/rules.md"
+            mode: "write"
+            content: |
+              # Cursor 规则（来源：${repo.id}）
+              - pages/components 禁止直接 import services/stores
+              - 统一从 src/hooks/* 引用业务逻辑
+          - path: ".claude/prompt.md"
+            mode: "write"
+            content_from_prompt: "frontend-review-v1"
+            content_order: "prompt-first"
+
+  oclif_impl:
+    overview: >
+      基于 TypeScript + oclif(v3) 实现。命令层仅负责参数解析与输出，领域逻辑位于 core/*，
+      基础设施适配（git/rg/fs/yaml/merge）位于 infra/*，类型与配置在 types/* 与 config/*。
+    tooling:
+      node: "lts(22+)"
+      package_manager: "pnpm"
+      deps_runtime:
+        - "@oclif/core": "CLI 框架"
+        - "js-yaml": "YAML 读写"
+        - "simple-git" : "Git 封装（或 child_process 调 git）"
+      deps_dev:
+        - "typescript": "TS 编译"
+        - "tsup": "打包（也可用 esbuild）"
+        - "vitest": "单测"
+    package_json_fields:
+      bin:
+        ac: "bin/run"
+      oclif:
+        commands: "dist/commands"
+        bin: "ac"
+      scripts:
+        - name: "build"
+          value: "tsup src/index.ts --format cjs --out-dir dist && tsup src/commands --format cjs --out-dir dist/commands --splitting"
+        - name: "typecheck"
+          value: "tsc --noEmit"
+        - name: "dev"
+          value: "tsx src/index.ts"
+        - name: "test"
+          value: "vitest"
+    dir_tree: |
+      ac/
+      ├─ bin/
+      │  └─ run                  # 可执行入口（shebang）；调用已编译的 oclif 运行时
+      ├─ src/
+      │  ├─ index.ts             # oclif 入口（export run/flush）；注册 CLI
+      │  ├─ commands/            # 命令层：参数解析 + 调用核心服务
+      │  │  ├─ repo/             # 复合命令 `ac repo`
+      │  │  │  ├─ index.ts       # 分派子命令
+      │  │  │  ├─ add.ts         # `ac repo add`
+      │  │  │  ├─ list.ts        # `ac repo list`
+      │  │  │  ├─ update.ts      # `ac repo update`
+      │  │  │  └─ remove.ts      # `ac repo remove`
+      │  │  ├─ init.ts           # `ac init`
+      │  │  ├─ apply.ts          # `ac apply`
+      │  │  └─ search.ts         # `ac search`
+      │  ├─ core/                # 领域逻辑（业务核心）
+      │  │  ├─ config.service.ts   # 配置解析：逐级查找 .ac.yaml / 全局 ~/.ac/config.yaml
+      │  │  ├─ repo.service.ts     # repo 管理逻辑（add/list/update/remove）
+      │  │  ├─ template.service.ts # 加载/解析模板 (prompt/context)
+      │  │  ├─ search.service.ts   # 索引/rg 搜索，结果打分
+      │  │  └─ apply.service.ts    # 落地写入、dry-run、${repo.id} 插值
+      │  ├─ config/
+      │  │  ├─ constants.ts      # 常量（APP 名称、默认路径）
+      │  │  └─ paths.ts          # 路径拼接与 ~ 展开
+      │  ├─ types/
+      │  │  ├─ config.ts         # 配置文件类型定义 (.ac.yaml / config.yaml)
+      │  │  └─ repo-template.ts  # 模板类型定义 (Header/PromptDoc/ContextDoc)
+      │  ├─ infra/               # 基础设施适配层
+      │  │  ├─ git.ts            # Git 操作封装 (clone/pull/status)
+      │  │  ├─ rg.ts             # ripgrep 调用封装
+      │  │  ├─ yaml.ts           # YAML 读写
+      │  │  ├─ fs.ts             # FS 工具：mkdirp、原子写、exists
+      │  │  ├─ json-merge.ts     # JSON 浅合并
+      │  │  └─ logger.ts         # 日志接口
+      │  ├─ presentation/
+      │  │  └─ table.ts          # 输出格式化（列表/搜索结果表格）
+      │  └─ test/                # 单测
+      │     ├─ config.test.ts
+      │     ├─ repo.test.ts
+      │     ├─ apply.test.ts
+      │     └─ search.test.ts
+      ├─ package.json
+      └─ tsconfig.json
+    command_wiring_flow:
+      - "命令解析（oclif flags/args）"
+      - "resolveConfig：确定项目或全局配置"
+      - "resolveRepo：确定仓库 alias（若需要）"
+      - "执行核心服务（repo/template/search/apply）"
+      - "呈现结果（stdout/表格；dry-run 预览）"
+    cross_platform_notes:
+      - "需要系统已安装 git；ripgrep 可选但建议安装（启用 --deep 才用）。"
+      - "路径与权限：Windows/Unix 路径差异由 fs 工具层屏蔽。"
+    error_handling:
+      - "找不到模板 id → 友好错误并提示 `ac search`。"
+      - "merge 非 JSON → 明确报错并建议使用 write/append。"
+      - "仓库不存在或未配置 → 提示 `ac repo add` 或在 init 时写入。"
