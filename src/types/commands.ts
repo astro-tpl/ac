@@ -77,6 +77,19 @@ export interface SearchFlags extends GlobalFlags {
   repo?: string
 }
 
+// Show 命令相关
+export interface ShowArgs {
+  /** 模板 ID */
+  id: string
+}
+
+export interface ShowFlags extends GlobalFlags {
+  /** 仓库别名 */
+  repo?: string
+  /** 输出指定属性路径 */
+  output?: string
+}
+
 // 应用结果
 export interface ApplyResult {
   /** 目标文件路径 */

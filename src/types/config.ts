@@ -22,6 +22,8 @@ export interface DefaultConfig {
   dest: string
   /** 默认写入模式 */
   mode: 'write' | 'append' | 'merge'
+  /** 默认语言 */
+  lang: string
 }
 
 // 项目配置文件 (.ac.yaml)

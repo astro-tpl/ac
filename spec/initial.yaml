@@ -43,7 +43,7 @@ ac_project:
           effect: "触发 ripgrep 对模板正文内容进行深度搜索。"
 
   # ------------------------------------------------------------
-  # 命令（第一版仅保留 4 条）
+  # 命令
   # ------------------------------------------------------------
   commands:
     - name: "repo"
@@ -134,7 +134,45 @@ ac_project:
       scoring:
         head_fields_weight: 3   # id/name/labels/summary
         content_weight: 1       # deep 模式时对 content 的命中分
-      output_format: "score  type  id  name — summary  [labels...]"
+      lang:
+        - "如果lang是中文, 要支持拼音模糊搜索"
+      output_format:
+        - "默认使用表格形式展示结果, 包含type、id、name、summary、labels"
+        - "分数仅用做排序, 不用显示"
+        - "使用 https://www.npmjs.com/package/table 来渲染表格"
+      interaction:
+        - "支持交互式搜索, 类似 fzf 的交互方式, 但是要支持中文拼音模糊搜索"
+        - "支持上下键浏览/选择模板, 然后调用 `ac show` 直接展示模板内容"
+
+    - name: "show"
+      description: "显示模板内容。"
+      config_resolution: "遵循 global_args.config_resolution；可用 --repo 指定仓库。"
+      args:
+        - name: "<id>"
+          description: "模板 ID。"
+      flags:
+        - name: "--repo <alias>"
+          optional: true
+          effect: "在多仓场景下显式指定模板来源仓库的别名（alias）。"
+        - name: "-o, --output <attr-path>"
+          optional: true
+          effect: "输出指定路径的属性值。如果没有指定，则输出所有属性。"
+          example:
+            - "id"
+            - "name"
+            - "labels"
+            - "summary"
+            - "content"
+            - "targets"
+            - "..."
+          default:
+            - "根据 type 输出不同的属性。"
+            - "如果是 prompt 类型，则输出 content。"
+            - "如果是 context 类型，则输出 targets。"
+      error_handling:
+        - "找不到指定模板 id：输出清晰错误并建议使用 `ac search`。"
+        - "输出路径不存在：输出清晰错误"
+        - "如果 id 重复, 则提示用户选择要显示的模板. 选择前显示和 search 一样的结果列表"
 
   # ------------------------------------------------------------
   # 配置文件（项目与全局）
@@ -144,7 +182,7 @@ ac_project:
       filename: ".ac.yaml"
       resolution: "从当前目录逐级向上查找。"
       schema:
-        version: 1
+        version: "v1.0.0"
         repos:
           - name: "<alias>"
             git: "<git-url>"
@@ -154,17 +192,19 @@ ac_project:
           repo: "<alias or empty>"
           dest: "."
           mode: "write"
+          lang: "en"
     global_config:
       filename: "~/.ac/config.yaml"
       auto_init:
         when_missing: true
         default_value:
-          version: 1
+          version: "v1.0.0"
           repos: []
           defaults:
             repo: ""
             dest: "."
             mode: "write"
+            lang: "zh"
 
   # ------------------------------------------------------------
   # 仓库管理与索引
@@ -258,30 +298,6 @@ ac_project:
   # 示例配置
   # ------------------------------------------------------------
   examples:
-    global_config_initial:
-      path: "~/.ac/config.yaml"
-      value:
-        version: 1
-        repos: []
-        defaults:
-          repo: ""
-          dest: "."
-          mode: "write"
-          lang: "en"
-    project_config_minimal:
-      path: "./.ac.yaml"
-      value:
-        version: 1
-        repos:
-          - name: "core"
-            git: "https://github.com/your-org/ai-context-templates"
-            branch: "main"
-            path: "~/.ac/repos/core"
-        defaults:
-          repo: "core"
-          dest: "."
-          mode: "write"
-          lang: "zh"
     prompt_template_minimal:
       value:
         version: "v1.0.0"
@@ -401,6 +417,7 @@ ac_project:
       - "需要系统已安装 git；ripgrep 可选但建议安装（启用 --deep 才用）。"
       - "路径与权限：Windows/Unix 路径差异由 fs 工具层屏蔽。"
     error_handling:
+      - "找不到命令时, 提示命令不存在, 并且默认输出 help 信息"
       - "找不到模板 id → 友好错误并提示 `ac search`。"
       - "merge 非 JSON → 明确报错并建议使用 write/append。"
       - "仓库不存在或未配置 → 提示 `ac repo add` 或在 init 时写入。"

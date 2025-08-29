@@ -38,6 +38,7 @@ export const DEFAULT_CONFIG = {
     repo: '',
     dest: '.',
     mode: 'write' as const,
+    lang: 'zh',
   },
 } as const
 

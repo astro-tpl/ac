@@ -2,12 +2,14 @@
  * Apply 命令 - 将模板应用到项目文件
  */
 
-import { Command, Flags } from '@oclif/core'
+import { Flags } from '@oclif/core'
+import { BaseCommand } from './base'
 import { applyService } from '../core/apply.service'
 import { logger } from '../infra/logger'
+import { t } from '../i18n'
 import { renderTable, renderKeyValue } from '../presentation/table'
 
-export default class Apply extends Command {
+export default class Apply extends BaseCommand {
   static override description = '将模板应用到项目文件。支持 context/prompt/原始内容三种来源'
 
   static override examples = [
@@ -84,7 +86,7 @@ export default class Apply extends Command {
       }
       
     } catch (error: any) {
-      logger.error('应用模板失败', error)
+      logger.error(t('apply.failed', { error: error.message }), error)
       this.exit(1)
     }
   }
@@ -104,39 +106,39 @@ export default class Apply extends Command {
       }
     }>
     totalFiles: number
-  }): void {
-    logger.info(`预览模式 - 将要修改 ${result.totalFiles} 个文件:`)
+  }  ): void {
+    logger.info(t('apply.preview.title', { count: result.totalFiles }))
     logger.plain('')
     
     for (let i = 0; i < result.results.length; i++) {
       const item = result.results[i]
       
-      logger.plain(`📄 文件 ${i + 1}: ${item.targetPath}`)
+      logger.plain(t('apply.preview.file', { index: i + 1, path: item.targetPath }))
       
       const details = {
-        '状态': item.isNewFile ? '新建文件' : '修改现有文件',
-        '模式': item.mode,
-        '内容': item.contentSummary
+        [t('apply.preview.status')]: item.isNewFile ? t('apply.preview.status.new') : t('apply.preview.status.modify'),
+        [t('apply.preview.mode')]: item.mode,
+        [t('apply.preview.content')]: item.contentSummary
       }
       
       logger.plain(renderKeyValue(details, { indent: 2 }))
       
       // 显示 JSON 合并差异
       if (item.jsonKeyDiff) {
-        logger.plain('  JSON 合并差异:')
+        logger.plain(`  ${t('apply.preview.json_diff')}`)
         
         if (item.jsonKeyDiff.added.length > 0) {
-          logger.plain(`    新增键: ${item.jsonKeyDiff.added.join(', ')}`)
+          logger.plain(`    ${t('apply.preview.json_added', { keys: item.jsonKeyDiff.added.join(', ') })}`)
         }
         
         if (item.jsonKeyDiff.modified.length > 0) {
-          logger.plain(`    修改键: ${item.jsonKeyDiff.modified.join(', ')}`)
+          logger.plain(`    ${t('apply.preview.json_modified', { keys: item.jsonKeyDiff.modified.join(', ') })}`)
         }
       }
       
       logger.plain('')
     }
     
-    logger.info('使用不带 --dry-run 的命令来实际执行写入操作')
+    logger.info(t('apply.preview.execute'))
   }
 }

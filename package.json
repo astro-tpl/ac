@@ -23,7 +23,10 @@
   "dependencies": {
     "@oclif/core": "^3.15.1",
     "@oclif/plugin-help": "^6.0.8",
+    "@types/inquirer": "^9.0.9",
+    "inquirer": "^12.9.4",
     "js-yaml": "^4.1.0",
+    "pinyin-pro": "^3.27.0",
     "simple-git": "^3.20.0",
     "tslib": "^2.8.1"
   },

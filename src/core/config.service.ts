@@ -42,7 +42,7 @@ export class ConfigService {
     if (forceGlobal) {
       const globalConfig = await this.getGlobalConfig()
       return {
-        source: 'global',
+        source: 'global' as const,
         path: GLOBAL_CONFIG_PATH,
         config: globalConfig
       }
@@ -54,7 +54,7 @@ export class ConfigService {
       try {
         const projectConfig = await this.loadProjectConfig(projectConfigPath)
         return {
-          source: 'project',
+          source: 'project' as const,
           path: projectConfigPath,
           config: projectConfig
         }
@@ -66,7 +66,7 @@ export class ConfigService {
     // 回退到全局配置
     const globalConfig = await this.getGlobalConfig()
     return {
-      source: 'global',
+      source: 'global' as const,
       path: GLOBAL_CONFIG_PATH,
       config: globalConfig
     }
@@ -85,7 +85,17 @@ export class ConfigService {
     try {
       const config = await readYamlFile<ProjectConfig>(configPath)
       this.validateConfig(config)
-      return config
+      
+      // 确保配置包含所有必需字段，提供默认值
+      const normalizedConfig: ProjectConfig = {
+        ...config,
+        defaults: {
+          ...DEFAULT_CONFIG.defaults,
+          ...config.defaults
+        }
+      }
+      
+      return normalizedConfig
     } catch (error: any) {
       throw new ConfigValidationError(
         `项目配置文件格式错误: ${configPath} - ${error.message}`
@@ -105,7 +115,17 @@ export class ConfigService {
     try {
       const config = await readYamlFile<GlobalConfig>(GLOBAL_CONFIG_PATH)
       this.validateConfig(config)
-      return config
+      
+      // 确保配置包含所有必需字段，提供默认值
+      const normalizedConfig: GlobalConfig = {
+        ...config,
+        defaults: {
+          ...DEFAULT_CONFIG.defaults,
+          ...config.defaults
+        }
+      }
+      
+      return normalizedConfig
     } catch (error: any) {
       logger.warn(`全局配置文件损坏，正在重新创建: ${error.message}`)
       await this.createDefaultGlobalConfig()

@@ -6,6 +6,7 @@ import { configService } from './config.service'
 import { templateService } from './template.service'
 import { getTemplateIndex, rebuildTemplateIndex } from '../infra/index-cache'
 import { searchTemplateContent, searchTemplateFields, checkRipgrepAvailable } from '../infra/rg'
+import { pinyinFuzzyMatch, pinyinMatchScore, containsChinese } from '../infra/pinyin'
 import { SEARCH_WEIGHTS } from '../config/constants'
 import { 
   SearchResult, 
@@ -288,6 +289,13 @@ export class SearchService {
         // 包含匹配
         else if (fieldValue.includes(searchKeyword)) {
           score += SEARCH_WEIGHTS.HEAD_FIELDS
+        }
+        // 拼音匹配（如果关键字或字段包含中文）
+        else if (containsChinese(keyword) || containsChinese(field)) {
+          const pinyinScore = pinyinMatchScore(field, keyword)
+          if (pinyinScore > 0) {
+            score += SEARCH_WEIGHTS.HEAD_FIELDS * (pinyinScore / 10) // 根据拼音匹配得分调整权重
+          }
         }
         // 部分匹配（模糊匹配）
         else if (this.fuzzyMatch(fieldValue, searchKeyword)) {

@@ -1,8 +1,9 @@
 /**
- * 日志和错误格式化工具
+ * 日志和错误格式化工具 - 支持国际化
  */
 
 import { ACError } from '../types/errors'
+import { t } from '../i18n'
 
 // 日志级别
 export enum LogLevel {
@@ -33,32 +34,32 @@ export class Logger {
       if (error instanceof ACError) {
         console.error(error.format())
       } else if (error) {
-        console.error(`${colors.red}❌ 错误:${colors.reset} ${message}`)
+        console.error(`${colors.red}❌ ${t('common.error')}:${colors.reset} ${message}`)
         console.error(`${colors.gray}${error.message}${colors.reset}`)
         if (error.stack && this.level >= LogLevel.DEBUG) {
           console.error(`${colors.gray}${error.stack}${colors.reset}`)
         }
       } else {
-        console.error(`${colors.red}❌ 错误:${colors.reset} ${message}`)
+        console.error(`${colors.red}❌ ${t('common.error')}:${colors.reset} ${message}`)
       }
     }
   }
 
   warn(message: string): void {
     if (this.level >= LogLevel.WARN) {
-      console.warn(`${colors.yellow}⚠️  警告:${colors.reset} ${message}`)
+      console.warn(`${colors.yellow}⚠️  ${t('common.warning')}:${colors.reset} ${message}`)
     }
   }
 
   info(message: string): void {
     if (this.level >= LogLevel.INFO) {
-      console.log(`${colors.blue}ℹ️  信息:${colors.reset} ${message}`)
+      console.log(`${colors.blue}ℹ️  ${t('common.info')}:${colors.reset} ${message}`)
     }
   }
 
   success(message: string): void {
     if (this.level >= LogLevel.INFO) {
-      console.log(`${colors.green}✅ 成功:${colors.reset} ${message}`)
+      console.log(`${colors.green}✅ ${t('common.success')}:${colors.reset} ${message}`)
     }
   }
 
@@ -91,7 +92,7 @@ export function formatError(error: Error | ACError): string {
     return error.format()
   }
   
-  return `❌ 错误: ${error.message}`
+  return `❌ ${t('common.error')}: ${error.message}`
 }
 
 /**
@@ -152,7 +153,7 @@ export function createProgress(total: number): {
       lastLength = output.length
     },
     
-    complete(message = '完成') {
+    complete(message = t('common.done')) {
       if (lastLength > 0) {
         process.stdout.write('\r' + ' '.repeat(lastLength) + '\r')
       }

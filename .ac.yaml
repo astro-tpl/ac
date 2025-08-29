@@ -1,0 +1,10 @@
+version: 1
+repos:
+  - name: ac-tpl
+    git: https://github.com/astro-tpl/ac-tpl.git
+    branch: main
+defaults:
+  repo: ''
+  dest: .
+  mode: write
+  lang: zh

@@ -2,18 +2,20 @@
  * Init 命令 - 创建项目配置文件
  */
 
-import { Command, Flags } from '@oclif/core'
+import { Flags } from '@oclif/core'
+import { BaseCommand } from './base'
 import { join } from 'node:path'
 import { writeYamlFile } from '../infra/yaml'
 import { fileExists } from '../infra/fs'
 import { logger } from '../infra/logger'
+import { t } from '../i18n'
 import { DEFAULT_CONFIG, PROJECT_CONFIG_FILENAME, DEFAULT_TEST_REPO, DEFAULT_BRANCH } from '../config/constants'
 import { inferRepoAlias, normalizePath } from '../config/paths'
 import { normalizeGitUrl, isValidGitUrl } from '../infra/git'
 import { ProjectConfig, RepoConfig } from '../types/config'
 import { ConfigValidationError } from '../types/errors'
 
-export default class Init extends Command {
+export default class Init extends BaseCommand {
   static override description = '在当前目录生成 .ac.yaml 项目配置文件'
 
   static override examples = [
@@ -50,7 +52,7 @@ export default class Init extends Command {
     // 检查配置文件是否已存在
     if (await fileExists(configPath) && !flags.force) {
       throw new ConfigValidationError(
-        `配置文件已存在: ${configPath}。使用 --force 强制覆盖`
+        t('init.exists', { path: configPath })
       )
     }
     
@@ -64,7 +66,7 @@ export default class Init extends Command {
     if (flags.repo) {
       if (!isValidGitUrl(flags.repo)) {
         throw new ConfigValidationError(
-          `无效的 Git URL: ${flags.repo}`
+          t('error.git.invalid_url', { url: flags.repo })
         )
       }
       
@@ -84,18 +86,21 @@ export default class Init extends Command {
     try {
       await writeYamlFile(configPath, config)
       
-      logger.success(`配置文件已创建: ${configPath}`)
+      logger.success(t('init.success', { path: configPath }))
       
       if (config.repos.length > 0) {
-        logger.info(`已添加默认仓库: ${config.repos[0].name} (${config.repos[0].git})`)
-        logger.info(`使用 'ac repo list' 查看仓库列表`)
-        logger.info(`使用 'ac repo add <git-url>' 添加更多仓库`)
+        logger.info(t('init.repo.added', { 
+          name: config.repos[0].name, 
+          url: config.repos[0].git 
+        }))
+        logger.info(t('init.next.list'))
+        logger.info(t('init.next.add'))
       } else {
-        logger.info(`使用 'ac repo add ${DEFAULT_TEST_REPO}' 添加默认测试仓库`)
+        logger.info(t('init.repo.suggest', { url: DEFAULT_TEST_REPO }))
       }
       
     } catch (error: any) {
-      logger.error('创建配置文件失败', error)
+      logger.error(t('apply.failed', { error: error.message }), error)
       throw error
     }
   }
