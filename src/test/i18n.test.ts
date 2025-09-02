@@ -68,10 +68,10 @@ describe('i18n', () => {
 
     it('should support parameter interpolation', () => {
       initI18n('en')
-      expect(t('repo.add.success', { alias: 'test-repo' })).toBe('Repository test-repo added successfully.')
+      expect(t('repo.add.success', { name: 'test-repo' })).toBe('Repository added: test-repo')
       
       initI18n('zh')
-      expect(t('repo.add.success', { alias: 'test-repo' })).toBe('仓库 test-repo 添加成功。')
+      expect(t('repo.add.success', { name: 'test-repo' })).toBe('仓库已添加: test-repo')
     })
 
     it('should support multiple parameters', () => {

@@ -5,9 +5,8 @@
 import { configService } from './config.service'
 import { templateService } from './template.service'
 import { getTemplateIndex, rebuildTemplateIndex } from '../infra/index-cache'
-import { searchTemplateContent, searchTemplateFields, checkRipgrepAvailable } from '../infra/rg'
-import { pinyinFuzzyMatch, pinyinMatchScore, containsChinese } from '../infra/pinyin'
-import { SEARCH_WEIGHTS } from '../config/constants'
+import { searchTemplates as fuzzysortSearch } from '../infra/fuzzysort'
+import { DEFAULT_SEARCH_CONFIG } from '../types/ui'
 import { 
   SearchResult, 
   IndexedTemplate, 
@@ -16,6 +15,7 @@ import {
 } from '../types/template'
 import { RepoConfig } from '../types/config'
 import { logger } from '../infra/logger'
+import { t } from '../i18n'
 
 /**
  * 搜索选项
@@ -29,16 +29,16 @@ export interface SearchOptions {
   labels?: string[]
   /** 标签匹配模式 */
   labelMatchAll?: boolean
-  /** 深度搜索（使用 ripgrep） */
-  deep?: boolean
   /** 仓库过滤 */
   repoName?: string
   /** 强制使用全局配置 */
   forceGlobal?: boolean
   /** 最大结果数 */
   maxResults?: number
-  /** 大小写敏感 */
-  caseSensitive?: boolean
+  /** 是否启用拼音搜索 */
+  enablePinyin?: boolean
+  /** 搜索阈值 */
+  threshold?: number
 }
 
 /**
@@ -50,15 +50,15 @@ export class SearchService {
    */
   async searchTemplates(options: SearchOptions = {}): Promise<SearchResult[]> {
     const {
-      keyword,
+      keyword = '',
       type,
       labels = [],
       labelMatchAll = false,
-      deep = false,
       repoName,
       forceGlobal = false,
-      maxResults = 50,
-      caseSensitive = false
+      maxResults = DEFAULT_SEARCH_CONFIG.maxDisplayResults,
+      enablePinyin = DEFAULT_SEARCH_CONFIG.enablePinyin,
+      threshold = -10000
     } = options
     
     // 获取配置和仓库信息
@@ -69,85 +69,21 @@ export class SearchService {
     if (repoName) {
       repos = repos.filter(r => r.name === repoName)
       if (repos.length === 0) {
-        logger.warn(`仓库不存在: ${repoName}`)
+        logger.warn(t('repo.remove.notfound', { alias: repoName }))
         return []
       }
     }
     
     if (repos.length === 0) {
-      logger.info('没有配置任何仓库')
+      logger.info(t('search.no_repos'))
       return []
     }
     
     // 获取索引
     const index = await getTemplateIndex(repos)
     
-    let results: SearchResult[] = []
-    
-    // 基于索引的基础搜索
-    const indexResults = await this.searchInIndex(index, {
-      keyword,
-      type,
-      labels,
-      labelMatchAll,
-      repoName,
-      caseSensitive
-    })
-    
-    results.push(...indexResults)
-    
-    // 深度搜索（如果启用）
-    if (deep && keyword) {
-      try {
-        const deepResults = await this.deepSearch(keyword, repos, {
-          type,
-          labels,
-          labelMatchAll,
-          caseSensitive
-        })
-        
-        // 合并结果，避免重复
-        const existingIds = new Set(results.map(r => r.template.id))
-        const newResults = deepResults.filter(r => !existingIds.has(r.template.id))
-        
-        results.push(...newResults)
-      } catch (error: any) {
-        logger.warn(`深度搜索失败: ${error.message}`)
-      }
-    }
-    
-    // 排序和限制结果数量
-    results = this.sortSearchResults(results)
-    
-    if (maxResults > 0) {
-      results = results.slice(0, maxResults)
-    }
-    
-    return results
-  }
-  
-  /**
-   * 在索引中搜索
-   */
-  private async searchInIndex(
-    index: TemplateIndex,
-    options: {
-      keyword?: string
-      type?: 'prompt' | 'context'
-      labels?: string[]
-      labelMatchAll?: boolean
-      repoName?: string
-      caseSensitive?: boolean
-    }
-  ): Promise<SearchResult[]> {
-    const { keyword, type, labels = [], labelMatchAll = false, repoName, caseSensitive = false } = options
-    
+    // 过滤模板
     let templates = index.templates
-    
-    // 按仓库过滤
-    if (repoName) {
-      templates = templates.filter(t => t.repoName === repoName)
-    }
     
     // 按类型过滤
     if (type) {
@@ -156,26 +92,27 @@ export class SearchService {
     
     // 按标签过滤
     if (labels.length > 0) {
-      templates = templates.filter(t => this.matchesLabels(t, labels, labelMatchAll))
+      templates = templates.filter(template => {
+        if (labelMatchAll) {
+          return labels.every(label => template.labels.includes(label))
+        } else {
+          return labels.some(label => template.labels.includes(label))
+        }
+      })
     }
     
-    // 关键字搜索和打分
-    const results: SearchResult[] = []
-    
-    for (const template of templates) {
-      const score = this.calculateScore(template, keyword, caseSensitive)
-      
-      if (!keyword || score > 0) {
-        results.push({
-          score,
-          template,
-          matchedFields: this.getMatchedFields(template, keyword, caseSensitive)
-        })
-      }
-    }
+    // 使用 fuzzysort 进行搜索
+    const results = fuzzysortSearch(templates, keyword, {
+      limit: maxResults,
+      threshold,
+      enablePinyin,
+      weights: DEFAULT_SEARCH_CONFIG.searchWeights
+    })
     
     return results
   }
+  
+  // 旧的搜索方法已被 fuzzysort 替代
   
   /**
    * 深度搜索（使用 ripgrep）
@@ -190,9 +127,14 @@ export class SearchService {
       caseSensitive?: boolean
     }
   ): Promise<SearchResult[]> {
+    // TODO: 临时禁用深度搜索，将在重构时使用 fuzzysort 重新实现
+    logger.debug('Deep search temporarily disabled, will be reimplemented with fuzzysort')
+    return []
+    
+    /* 
     // 检查 ripgrep 是否可用
     if (!await checkRipgrepAvailable()) {
-      throw new Error('ripgrep 未安装')
+      throw new Error(t('error.ripgrep.not_available'))
     }
     
     const { type, labels = [], labelMatchAll = false, caseSensitive = false } = options
@@ -248,147 +190,27 @@ export class SearchService {
               matchedFields: ['content']
             })
           } catch (error: any) {
-            logger.debug(`加载深度搜索模板失败: ${rgResult.path}`)
+            logger.debug(t('apply.failed', { error: `load template failed: ${rgResult.path}` }))
           }
         }
       } catch (error: any) {
-        logger.debug(`仓库 ${repo.name} 深度搜索失败: ${error.message}`)
+        logger.debug(t('search.failed'))
       }
     }
     
     return results
+    */
   }
   
-  /**
-   * 计算搜索得分
-   */
-  private calculateScore(template: IndexedTemplate, keyword?: string, caseSensitive = false): number {
-    if (!keyword) {
-      return 1 // 无关键字时返回基础分数
-    }
-    
-    const searchKeyword = caseSensitive ? keyword : keyword.toLowerCase()
-    let score = 0
-    
-    // 搜索头部字段
-    const headFields = [
-      template.id,
-      template.name,
-      template.summary,
-      ...template.labels
-    ]
-    
-    for (const field of headFields) {
-      if (field) {
-        const fieldValue = caseSensitive ? field : field.toLowerCase()
-        
-        // 完全匹配
-        if (fieldValue === searchKeyword) {
-          score += SEARCH_WEIGHTS.HEAD_FIELDS * 2
-        }
-        // 包含匹配
-        else if (fieldValue.includes(searchKeyword)) {
-          score += SEARCH_WEIGHTS.HEAD_FIELDS
-        }
-        // 拼音匹配（如果关键字或字段包含中文）
-        else if (containsChinese(keyword) || containsChinese(field)) {
-          const pinyinScore = pinyinMatchScore(field, keyword)
-          if (pinyinScore > 0) {
-            score += SEARCH_WEIGHTS.HEAD_FIELDS * (pinyinScore / 10) // 根据拼音匹配得分调整权重
-          }
-        }
-        // 部分匹配（模糊匹配）
-        else if (this.fuzzyMatch(fieldValue, searchKeyword)) {
-          score += SEARCH_WEIGHTS.HEAD_FIELDS * 0.5
-        }
-      }
-    }
-    
-    return score
-  }
+  // 搜索得分计算已由 fuzzysort 处理
   
-  /**
-   * 获取匹配的字段
-   */
-  private getMatchedFields(template: IndexedTemplate, keyword?: string, caseSensitive = false): string[] {
-    if (!keyword) {
-      return []
-    }
-    
-    const searchKeyword = caseSensitive ? keyword : keyword.toLowerCase()
-    const matchedFields: string[] = []
-    
-    // 检查各个字段
-    const fieldMap = {
-      id: template.id,
-      name: template.name,
-      summary: template.summary,
-      labels: template.labels.join(' ')
-    }
-    
-    for (const [fieldName, fieldValue] of Object.entries(fieldMap)) {
-      if (fieldValue) {
-        const value = caseSensitive ? fieldValue : fieldValue.toLowerCase()
-        if (value.includes(searchKeyword)) {
-          matchedFields.push(fieldName)
-        }
-      }
-    }
-    
-    return matchedFields
-  }
+  // 匹配字段检测已由 fuzzysort 处理
   
-  /**
-   * 模糊匹配
-   */
-  private fuzzyMatch(text: string, pattern: string): boolean {
-    const textChars = text.split('')
-    const patternChars = pattern.split('')
-    
-    let textIndex = 0
-    let patternIndex = 0
-    
-    while (textIndex < textChars.length && patternIndex < patternChars.length) {
-      if (textChars[textIndex] === patternChars[patternIndex]) {
-        patternIndex++
-      }
-      textIndex++
-    }
-    
-    return patternIndex === patternChars.length
-  }
+  // 模糊匹配已由 fuzzysort 处理
   
-  /**
-   * 检查模板是否匹配标签
-   */
-  private matchesLabels(template: IndexedTemplate, labels: string[], matchAll = false): boolean {
-    if (!labels.length) return true
-    if (!template.labels.length) return false
-    
-    const templateLabels = template.labels.map(l => l.toLowerCase())
-    const searchLabels = labels.map(l => l.toLowerCase())
-    
-    if (matchAll) {
-      return searchLabels.every(label => templateLabels.includes(label))
-    } else {
-      return searchLabels.some(label => templateLabels.includes(label))
-    }
-  }
+  // 标签匹配已集成到主搜索方法中
   
-  /**
-   * 排序搜索结果
-   */
-  private sortSearchResults(results: SearchResult[]): SearchResult[] {
-    return results.sort((a, b) => {
-      // 首先按分数排序（降序）
-      if (b.score !== a.score) {
-        return b.score - a.score
-      }
-      
-      // 分数相同时按名称排序
-      return a.template.name.localeCompare(b.template.name)
-    })
-  }
+  // 结果排序已由 fuzzysort 处理
   
   /**
    * 获取搜索统计信息
@@ -459,7 +281,7 @@ export class SearchService {
         duration
       }
     } catch (error: any) {
-      logger.error('重建索引失败', error)
+      logger.error(t('search.rebuild_index_failed'), error)
       return {
         success: false,
         templateCount: 0,

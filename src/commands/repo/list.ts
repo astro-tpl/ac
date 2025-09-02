@@ -1,13 +1,17 @@
 /**
- * Repo List 命令 - 列出所有仓库
+ * Repo List Command - List all repositories
  */
 
-import { Command, Flags } from '@oclif/core'
+import { Flags } from '@oclif/core'
+import { BaseCommand } from '../../base/base'
 import { repoService } from '../../core/repo.service'
 import { logger } from '../../infra/logger'
+import { t } from '../../i18n'
 
-export default class RepoList extends Command {
-  static override description = '列出当前有效配置中的仓库'
+export default class RepoList extends BaseCommand {
+  static override description = t('commands.repo.list.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -17,11 +21,11 @@ export default class RepoList extends Command {
 
   static override flags = {
     global: Flags.boolean({
-      description: '列出全局配置中的仓库',
+      description: t('commands.repo.list.flags.global'),
       default: false
     }),
     status: Flags.boolean({
-      description: '显示仓库状态信息',
+      description: t('commands.repo.list.flags.status'),
       default: false
     })
   }
@@ -36,41 +40,41 @@ export default class RepoList extends Command {
       })
       
       if (result.repos.length === 0) {
-        logger.info('没有配置任何仓库')
-        logger.info('使用 \'ac repo add <git-url>\' 添加仓库')
+        logger.info(t('repo.list.no_repos'))
+        logger.info(t('repo.list.add_help'))
         return
       }
       
-      logger.info(`配置来源: ${result.configSource === 'project' ? '项目配置' : '全局配置'}`)
-      logger.info(`配置文件: ${result.configPath}`)
-      logger.info(`仓库数量: ${result.repos.length}`)
+      logger.info(`${t('repo.list.config_source')}: ${result.configSource === 'project' ? t('config.source.project') : t('config.source.global')}`)
+      logger.info(`${t('repo.list.config_file')}: ${result.configPath}`)
+      logger.info(`${t('repo.list.repo_count')}: ${result.repos.length}`)
       logger.info('')
       
       for (const repo of result.repos) {
         logger.plain(`📦 ${repo.name}`)
-        logger.plain(`   URL: ${repo.git}`)
-        logger.plain(`   分支: ${repo.branch}`)
-        logger.plain(`   路径: ${repo.localPath}`)
+        logger.plain(`   ${t('repo.add.info.url')}: ${repo.git}`)
+        logger.plain(`   ${t('repo.add.info.branch')}: ${repo.branch}`)
+        logger.plain(`   ${t('repo.add.info.path')}: ${repo.localPath}`)
         
         if (flags.status && repo.status) {
           const status = repo.status.exists 
-            ? (repo.status.isValid ? '✅ 正常' : '❌ 无效') 
-            : '❌ 不存在'
-          logger.plain(`   状态: ${status}`)
+            ? (repo.status.isValid ? t('repo.list.status.normal') : t('repo.list.status.invalid')) 
+            : t('repo.list.status.not_exists')
+          logger.plain(`   ${t('common.status')}: ${status}`)
           
           if (repo.status.currentBranch) {
-            logger.plain(`   当前分支: ${repo.status.currentBranch}`)
+            logger.plain(`   ${t('repo.list.current_branch')}: ${repo.status.currentBranch}`)
           }
           
           if (repo.status.lastCommit) {
             const commit = repo.status.lastCommit
-            logger.plain(`   最新提交: ${commit.hash.slice(0, 8)} (${commit.date.toLocaleDateString()})`)
-            logger.plain(`   提交信息: ${commit.message}`)
-            logger.plain(`   作者: ${commit.author}`)
+            logger.plain(`   ${t('repo.list.last_commit')}: ${commit.hash.slice(0, 8)} (${commit.date.toLocaleDateString()})`)
+            logger.plain(`   ${t('repo.list.commit_message')}: ${commit.message}`)
+            logger.plain(`   ${t('repo.list.author')}: ${commit.author}`)
           }
           
           if (repo.status.hasUncommittedChanges) {
-            logger.plain(`   ⚠️  有未提交的更改`)
+            logger.plain(`   ${t('repo.list.uncommitted_changes')}`)
           }
         }
         
@@ -78,11 +82,11 @@ export default class RepoList extends Command {
       }
       
       if (!flags.status) {
-        logger.info('使用 --status 显示详细状态信息')
+        logger.info(t('repo.list.status_help'))
       }
       
     } catch (error: any) {
-      logger.error('列出仓库失败', error)
+      logger.error(t('repo.list.failed'), error)
       this.exit(1)
     }
   }

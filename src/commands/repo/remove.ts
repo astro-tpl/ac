@@ -1,13 +1,17 @@
 /**
- * Repo Remove 命令 - 移除仓库
+ * Repo Remove Command - Remove repository
  */
 
-import { Command, Args, Flags } from '@oclif/core'
+import { Args, Flags } from '@oclif/core'
+import { BaseCommand } from '../../base/base'
 import { repoService } from '../../core/repo.service'
 import { logger } from '../../infra/logger'
+import { t } from '../../i18n'
 
-export default class RepoRemove extends Command {
-  static override description = '从配置中移除仓库并可选择清理本地缓存目录'
+export default class RepoRemove extends BaseCommand {
+  static override description = t('commands.repo.remove.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %> ac-tpl',
@@ -17,18 +21,18 @@ export default class RepoRemove extends Command {
 
   static override args = {
     alias: Args.string({
-      description: '仓库别名',
+      description: t('commands.repo.remove.args.alias'),
       required: true
     })
   }
 
   static override flags = {
     'remove-local': Flags.boolean({
-      description: '同时删除本地缓存目录',
+      description: t('commands.repo.remove.flags.remove_local'),
       default: false
     }),
     global: Flags.boolean({
-      description: '从全局配置中移除仓库',
+      description: t('commands.repo.remove.flags.global'),
       default: false
     })
   }
@@ -39,8 +43,8 @@ export default class RepoRemove extends Command {
     try {
       // 确认操作
       if (flags['remove-local']) {
-        logger.warn(`⚠️  即将删除仓库 "${args.alias}" 的本地缓存目录`)
-        logger.warn('此操作不可恢复！')
+        logger.warn(t('repo.remove.warning', { name: args.alias }))
+        logger.warn(t('repo.remove.warning_irreversible'))
       }
       
       const result = await repoService.removeRepo({
@@ -50,24 +54,24 @@ export default class RepoRemove extends Command {
       })
       
       if (result.removedFromConfig) {
-        logger.success(`仓库已从配置中移除: ${args.alias}`)
+        logger.success(t('repo.remove.success_config', { name: args.alias }))
       }
       
       if (result.removedLocal) {
-        logger.success(`本地缓存目录已删除: ~/.ac/repos/${args.alias}`)
+        logger.success(t('repo.remove.success_local', { name: args.alias }))
       } else if (flags['remove-local']) {
-        logger.info(`本地缓存目录不存在: ~/.ac/repos/${args.alias}`)
+        logger.info(t('repo.remove.local_not_exists', { name: args.alias }))
       }
       
       if (!flags['remove-local']) {
-        logger.info(`本地缓存目录保留在: ~/.ac/repos/${args.alias}`)
-        logger.info('使用 --remove-local 选项可同时删除本地目录')
+        logger.info(t('repo.remove.local_kept', { name: args.alias }))
+        logger.info(t('repo.remove.local_help'))
       }
       
-      logger.info('模板索引已刷新')
+      logger.info(t('repo.remove.index_refreshed'))
       
     } catch (error: any) {
-      logger.error('移除仓库失败', error)
+      logger.error(t('repo.remove.failed'), error)
       this.exit(1)
     }
   }

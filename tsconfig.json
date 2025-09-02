@@ -2,28 +2,34 @@
   "compilerOptions": {
     "declaration": true,
     "importHelpers": true,
-    "module": "CommonJS",
-    "outDir": "lib",
+    "module": "ESNext",
+    "outDir": "dist",
     "rootDir": "src",
     "strict": true,
-    "target": "ES2020",
+    "target": "ES2022",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmitOnError": false,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "allowJs": false
+    "allowJs": false,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "src/**/*.tsx"
   ],
   "exclude": [
-    "lib",
+    "dist",
     "node_modules",
     "**/*.test.ts",
     "**/*.spec.ts"

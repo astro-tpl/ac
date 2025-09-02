@@ -5,6 +5,7 @@
 import { homedir } from 'node:os'
 import { resolve, dirname, join, isAbsolute } from 'node:path'
 import { PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR } from './constants'
+import { t } from '../i18n'
 
 /**
  * 展开路径中的 ~ 符号
@@ -41,7 +42,7 @@ export function inferRepoAlias(gitUrl: string): string {
   // 提取最后一个路径段并去掉 .git 后缀
   const match = gitUrl.match(/\/([^/]+?)(?:\.git)?$/i)
   if (!match) {
-    throw new Error(`无法从 Git URL 推断仓库别名: ${gitUrl}`)
+    throw new Error(t('error.git.invalid_url', { url: gitUrl }))
   }
   return match[1]
 }

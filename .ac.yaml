@@ -4,7 +4,7 @@ repos:
     git: https://github.com/astro-tpl/ac-tpl.git
     branch: main
 defaults:
-  repo: ''
+  repo: ac-tpl
   dest: .
   mode: write
   lang: zh

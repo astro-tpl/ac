@@ -177,6 +177,13 @@ export class IndexCacheManager {
         lastModified: stats.mtime.getTime()
       }
       
+      // 为不同类型的模板添加特定字段
+      if (template.type === 'prompt') {
+        indexed.content = (template as any).content
+      } else if (template.type === 'context') {
+        indexed.targets = (template as any).targets
+      }
+      
       return indexed
     } catch (error: any) {
       logger.debug(`解析模板文件失败 ${filePath}: ${error.message}`)

@@ -1,13 +1,17 @@
 /**
- * Repo Update 命令 - 更新仓库
+ * Repo Update Command - Update repositories
  */
 
-import { Command, Args, Flags } from '@oclif/core'
+import { Args, Flags } from '@oclif/core'
+import { BaseCommand } from '../../base/base'
 import { repoService } from '../../core/repo.service'
 import { logger } from '../../infra/logger'
+import { t } from '../../i18n'
 
-export default class RepoUpdate extends Command {
-  static override description = '更新指定或全部仓库（git pull）并刷新索引'
+export default class RepoUpdate extends BaseCommand {
+  static override description = t('commands.repo.update.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -17,14 +21,14 @@ export default class RepoUpdate extends Command {
 
   static override args = {
     alias: Args.string({
-      description: '仓库别名（可选，为空则更新所有）',
+      description: t('commands.repo.update.args.alias'),
       required: false
     })
   }
 
   static override flags = {
     global: Flags.boolean({
-      description: '更新全局配置中的仓库',
+      description: t('commands.repo.update.flags.global'),
       default: false
     })
   }
@@ -43,27 +47,27 @@ export default class RepoUpdate extends Command {
       const totalCount = updated.length
       
       if (totalCount === 0) {
-        logger.info('没有需要更新的仓库')
+        logger.info(t('repo.update.no_repos'))
         return
       }
       
-      logger.success(`仓库更新完成: ${successCount}/${totalCount}`)
+      logger.success(t('repo.update.success', { success: successCount, total: totalCount }))
       
       // 显示详细结果
       for (const item of updated) {
         if (item.success) {
-          logger.info(`✅ ${item.name}: 更新成功`)
+          logger.info(t('repo.update.success_item', { name: item.name }))
         } else {
-          logger.warn(`❌ ${item.name}: ${item.error}`)
+          logger.warn(t('repo.update.failed_item', { name: item.name, error: item.error || 'Unknown error' }))
         }
       }
       
       if (successCount > 0) {
-        logger.info('模板索引已刷新，使用 \'ac search\' 查看最新模板')
+        logger.info(t('repo.update.next_step'))
       }
       
     } catch (error: any) {
-      logger.error('更新仓库失败', error)
+      logger.error(t('repo.update.failed'), error)
       this.exit(1)
     }
   }

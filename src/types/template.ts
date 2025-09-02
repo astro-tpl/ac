@@ -55,6 +55,10 @@ export interface IndexedTemplate extends TemplateHeader {
   absPath: string
   /** 最后修改时间 */
   lastModified: number
+  /** 模板内容（对于 prompt 类型） */
+  content?: string
+  /** 目标配置（对于 context 类型） */
+  targets?: TargetConfig[]
 }
 
 // 搜索结果

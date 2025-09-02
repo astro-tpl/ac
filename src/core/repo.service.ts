@@ -15,6 +15,7 @@ import {
   ConfigValidationError 
 } from '../types/errors'
 import { logger, createProgress } from '../infra/logger'
+import { t } from '../i18n'
 
 /**
  * 仓库服务类
@@ -36,7 +37,7 @@ export class RepoService {
     
     // 验证 Git URL
     if (!isValidGitUrl(gitUrl)) {
-      throw new ConfigValidationError(`无效的 Git URL: ${gitUrl}`)
+      throw new ConfigValidationError(t('error.git.invalid_url', { url: gitUrl }))
     }
     
     const normalizedUrl = normalizeGitUrl(gitUrl)
@@ -51,11 +52,11 @@ export class RepoService {
     if (existingRepo) {
       // 仓库已在配置中，检查本地是否存在
       if (await isDirectory(repoPath)) {
-        logger.info(`仓库已存在: ${repoName}`)
+        logger.info(t('repo.add.exists', { name: repoName }))
         return { repo: existingRepo, isNew: false }
       } else {
         // 配置存在但本地目录不存在，重新克隆
-        logger.info(`重新克隆仓库: ${repoName}`)
+        logger.info(t('repo.add.cloning', { alias: repoName, url: normalizedUrl }))
       }
     }
     
@@ -68,15 +69,15 @@ export class RepoService {
     
     try {
       // 克隆仓库
-      logger.info(`正在克隆仓库: ${normalizedUrl}`)
+      logger.info(t('repo.add.cloning', { alias: repoName, url: normalizedUrl }))
       await cloneRepository(normalizedUrl, repoPath, branch)
       
       // 添加到配置（如果不存在）
       if (!existingRepo) {
         await configService.addRepoToConfig(resolvedConfig, repoConfig)
-        logger.success(`仓库已添加到配置: ${repoName}`)
+        logger.success(t('repo.add.success', { name: repoName }))
       } else {
-        logger.success(`仓库已重新克隆: ${repoName}`)
+        logger.success(t('common.success'))
       }
       
       // 清除索引缓存，强制重建
@@ -84,9 +85,7 @@ export class RepoService {
       
       return { repo: repoConfig, isNew: !existingRepo }
     } catch (error: any) {
-      throw new GitOperationError(
-        `添加仓库失败: ${normalizedUrl} - ${error.message}`
-      )
+      throw new GitOperationError(t('repo.add.failed'))
     }
   }
   
@@ -177,11 +176,11 @@ export class RepoService {
       : resolvedConfig.config.repos
     
     if (repoName && reposToUpdate.length === 0) {
-      throw new RepoNotFoundError(`仓库不存在: ${repoName}`)
+      throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
     if (reposToUpdate.length === 0) {
-      logger.info('没有配置任何仓库')
+      logger.info(t('search.no_repos'))
       return { updated: [] }
     }
     
@@ -190,14 +189,14 @@ export class RepoService {
     
     for (let i = 0; i < reposToUpdate.length; i++) {
       const repo = reposToUpdate[i]
-      progress.update(i, `正在更新 ${repo.name}`)
+      progress.update(i, t('repo.update.success_item', { name: repo.name }))
       
       try {
         const repoPath = getRepoPath(repo.name)
         
         if (!await isDirectory(repoPath)) {
           // 仓库不存在，重新克隆
-          logger.debug(`仓库目录不存在，重新克隆: ${repo.name}`)
+          logger.debug(t('repo.list.status.not_exists'))
           await cloneRepository(repo.git, repoPath, repo.branch)
         } else {
           // 更新现有仓库
@@ -206,7 +205,7 @@ export class RepoService {
         
         results.push({ name: repo.name, success: true })
       } catch (error: any) {
-        logger.warn(`更新仓库失败 ${repo.name}: ${error.message}`)
+        logger.warn(t('repo.update.failed_item', { name: repo.name, error: error.message }))
         results.push({ 
           name: repo.name, 
           success: false, 
@@ -215,7 +214,7 @@ export class RepoService {
       }
     }
     
-    progress.complete(`更新完成: ${results.filter(r => r.success).length}/${results.length}`)
+    progress.complete(t('repo.update.success', { success: results.filter(r => r.success).length, total: results.length }))
     
     // 清除索引缓存，强制重建
     await indexCache.clearCache()
@@ -241,7 +240,7 @@ export class RepoService {
     // 检查仓库是否存在
     const repo = resolvedConfig.config.repos.find(r => r.name === repoName)
     if (!repo) {
-      throw new RepoNotFoundError(`仓库不存在: ${repoName}`)
+      throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
     let removedFromConfig = false
@@ -251,7 +250,7 @@ export class RepoService {
       // 从配置中移除
       await configService.removeRepoFromConfig(resolvedConfig, repoName)
       removedFromConfig = true
-      logger.success(`仓库已从配置中移除: ${repoName}`)
+      logger.success(t('repo.remove.success_config', { name: repoName }))
       
       // 移除本地目录（如果请求）
       if (removeLocal) {
@@ -259,7 +258,7 @@ export class RepoService {
         if (await isDirectory(repoPath)) {
           await removeDir(repoPath)
           removedLocalDir = true
-          logger.success(`本地仓库目录已删除: ${repoPath}`)
+          logger.success(t('repo.remove.success_local', { name: repoName }))
         }
       }
       
@@ -271,9 +270,7 @@ export class RepoService {
         removedLocal: removedLocalDir
       }
     } catch (error: any) {
-      throw new GitOperationError(
-        `移除仓库失败: ${repoName} - ${error.message}`
-      )
+      throw new GitOperationError(t('repo.remove.failed'))
     }
   }
   
@@ -305,7 +302,7 @@ export class RepoService {
     
     const repo = resolvedConfig.config.repos.find(r => r.name === repoName)
     if (!repo) {
-      throw new RepoNotFoundError(`仓库不存在: ${repoName}`)
+      throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
     const localPath = getRepoPath(repoName)

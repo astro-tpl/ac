@@ -1,14 +1,18 @@
 /**
- * Repo Add 命令 - 添加模板仓库
+ * Repo Add Command - Add template repository
  */
 
-import { Command, Args, Flags } from '@oclif/core'
+import { Args, Flags } from '@oclif/core'
+import { BaseCommand } from '../../base/base'
 import { repoService } from '../../core/repo.service'
 import { logger } from '../../infra/logger'
+import { t } from '../../i18n'
 import { DEFAULT_BRANCH } from '../../config/constants'
 
-export default class RepoAdd extends Command {
-  static override description = '添加模板仓库到配置并克隆到本地缓存目录'
+export default class RepoAdd extends BaseCommand {
+  static override description = t('commands.repo.add.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %> https://github.com/astro-tpl/ac-tpl.git',
@@ -19,22 +23,22 @@ export default class RepoAdd extends Command {
 
   static override args = {
     'git-url': Args.string({
-      description: 'Git 仓库 URL',
+      description: t('commands.repo.add.args.git_url'),
       required: true
     })
   }
 
   static override flags = {
     name: Flags.string({
-      description: '仓库别名（默认从 URL 推断）',
+      description: t('commands.repo.add.flags.name'),
       helpValue: 'my-templates'
     }),
     branch: Flags.string({
-      description: '分支名',
+      description: t('commands.repo.add.flags.branch'),
       default: DEFAULT_BRANCH
     }),
     global: Flags.boolean({
-      description: '添加到全局配置而非项目配置',
+      description: t('commands.repo.add.flags.global'),
       default: false
     })
   }
@@ -51,22 +55,22 @@ export default class RepoAdd extends Command {
       })
       
       if (result.isNew) {
-        logger.success(`仓库已添加: ${result.repo.name}`)
+        logger.success(t('repo.add.success', { name: result.repo.name }))
       } else {
-        logger.info(`仓库已存在: ${result.repo.name}`)
+        logger.info(t('repo.add.exists', { name: result.repo.name }))
       }
       
-      logger.info(`- 名称: ${result.repo.name}`)
-      logger.info(`- URL: ${result.repo.git}`)
-      logger.info(`- 分支: ${result.repo.branch}`)
-      logger.info(`- 本地路径: ~/.ac/repos/${result.repo.name}`)
+      logger.info(`- ${t('repo.add.info.name')}: ${result.repo.name}`)
+      logger.info(`- ${t('repo.add.info.url')}: ${result.repo.git}`)
+      logger.info(`- ${t('repo.add.info.branch')}: ${result.repo.branch}`)
+      logger.info(`- ${t('repo.add.info.path')}: ~/.ac/repos/${result.repo.name}`)
       
       if (result.isNew) {
-        logger.info('使用 \'ac search\' 搜索可用模板')
+        logger.info(t('repo.add.next_step'))
       }
       
     } catch (error: any) {
-      logger.error('添加仓库失败', error)
+      logger.error(t('repo.add.failed'), error)
       this.exit(1)
     }
   }

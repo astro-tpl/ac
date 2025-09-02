@@ -3,7 +3,7 @@ ac_project:
   purpose: >
     统一管理 AI 编程上下文与提示词的命令行工具。支持初始化项目配置、
     管理模板仓库、搜索模板、以及将模板（context/prompt）应用到项目文件。
-    追求“极简规范、可移植、AI 友好”。
+    追求"极简规范、可移植、AI 友好"。基于 ink + React 提供现代化交互体验。
 
   # ------------------------------------------------------------
   # 全局参数（所有命令可共用的行为/旗标语义）
@@ -18,8 +18,8 @@ ac_project:
           effect: "强制使用并操作全局配置（~/.ac/config.yaml），忽略逐级查找。"
     repo_selection:
       description: >
-        需要选择模板来源仓库时，优先级为：`--repo` 显式指定 > 项目/全局配置中的 `defaults.repo` >
-        在所有已配置的 repos 中查找首个匹配。
+        默认搜索所有已配置的仓库。当模板ID重复时，展示仓库列表让用户选择。
+        可通过 `--repo` 显式指定特定仓库。
       flags:
         - name: "--repo <alias>"
           effect: "在多仓场景下显式指定模板来源仓库的别名（alias）。"
@@ -39,13 +39,18 @@ ac_project:
         - name: "-l, --label <label>"
           repeatable: true
           effect: "按标签过滤（默认 ANY 逻辑，后续可扩展 --match all）。"
-        - name: "--deep"
-          effect: "触发 ripgrep 对模板正文内容进行深度搜索。"
+    default_behavior:
+      description: "默认行为：执行 `ac` 不带任何参数时启动交互式搜索界面。"
+      effect: "相当于执行 `ac search` 命令。"
 
   # ------------------------------------------------------------
   # 命令
   # ------------------------------------------------------------
   commands:
+    - name: "default (no args)"
+      description: "默认启动交互式搜索界面，等同于 `ac search`。"
+      behavior: "直接进入基于 ink + React 的交互式搜索模式。"
+
     - name: "repo"
       description: "管理模板仓库（子命令：list, add, update, remove）"
       config_resolution: "遵循 global_args.config_resolution 优先级；支持 --global。"
@@ -112,40 +117,80 @@ ac_project:
           default: "write"
         - name: "--dry-run"
           default: false
-      interpolation:
-        supported_placeholders:
-          - "${repo.id}"
-        scope: "仅在 context.targets[].path 与 context.targets[].content 中有效。"
-        value_source: "取该模板的来源仓库 alias（即配置中 repos[].name）。"
+
       dry_run_output: "打印将变更的目标路径、模式、是否存在、内容摘要；merge 显示 JSON 顶层 key 差异。"
 
     - name: "search"
-      description: "按关键字/类型/标签搜索模板；必要时可深搜正文。"
+      description: "交互式模板搜索界面，基于 ink + React 实现现代化用户体验。"
       config_resolution: "遵循 global_args.config_resolution；可跨多个仓库。"
       args:
         - name: "<keyword>"
           optional: true
-          description: "关键字（可为空，仅用过滤器筛选）。"
+          description: "初始关键字（可为空，进入交互模式后可实时输入）。"
       flags:
         - name: "--type <context|prompt>"
         - name: "-l, --label <label>"
           repeatable: true
-        - name: "--deep"
-      scoring:
-        head_fields_weight: 3   # id/name/labels/summary
-        content_weight: 1       # deep 模式时对 content 的命中分
-      lang:
-        - "如果lang是中文, 要支持拼音模糊搜索"
-      output_format:
-        - "默认使用表格形式展示结果, 包含type、id、name、summary、labels"
-        - "分数仅用做排序, 不用显示"
-        - "使用 https://www.npmjs.com/package/table 来渲染表格"
-      interaction:
-        - "支持交互式搜索, 类似 fzf 的交互方式, 但是要支持中文拼音模糊搜索"
-        - "交互式搜索要支持动态更新搜索结果, 最大显示10行数据, 支持光标移动"
-        - "交互式搜索不需要按下回车才显示搜索结果, 按下任一键都要触发, 注意防抖即可"
-        - "支持上下键浏览/选择模板, 然后调用 `ac show` 直接展示模板内容"
+        - name: "--non-interactive"
+          effect: "禁用交互模式，直接输出搜索结果表格。"
+      
+      interactive_ui:
+        framework: "ink + React + TypeScript"
+        features:
+          search_input:
+            - "实时搜索输入框，支持中文拼音模糊搜索"
+            - "使用 fuzzysort 替代 ripgrep 进行模糊匹配"
+            - "防抖处理，避免过频繁的搜索触发"
+          
+          results_display:
+            - "最多显示 10 行搜索结果"
+            - "高亮当前选中项"
+            - "显示 type、id、name、repo、labels、summary 列"
+            - "支持实时更新搜索结果"
+          
+          keyboard_shortcuts:
+            navigation:
+              - key: "Ctrl+J / ↓"
+                action: "向下移动光标"
+              - key: "Ctrl+K / ↑" 
+                action: "向上移动光标"
+              - key: "Enter"
+                action: "选择当前项并退出"
+              - key: "Escape / Ctrl+C"
+                action: "退出搜索"
+            
+            actions:
+              - key: "Ctrl+A (apply)"
+                action: "应用选中的模板"
+                note: "可能与系统快捷键冲突，实现时需要检测并提供替代方案"
+                behavior:
+                  context: "列出将要影响的文件，等待用户确认后执行 apply"
+                  prompt: "提示用户输入目标文件路径（相对于配置根目录）"
+                  duplicate_id: "当模板 ID 重复时，展示仓库列表让用户选择"
+              
+              - key: "Ctrl+S (show)"
+                action: "显示选中模板的详细内容"
+                note: "可能与终端暂停输出冲突，实现时需要检测并提供替代方案"
+                behavior: "在新的 UI 面板中展示完整的模板内容"
+                duplicate_id: "当模板 ID 重复时，展示仓库列表让用户选择"
+              
+              - key: "Ctrl+Y (yank)"
+                action: "复制内容到系统剪切板"
+                behavior: "仅对 prompt 类型模板有效，复制其 content 字段到剪切板"
+                availability: "只在选中 prompt 类型模板时显示此快捷键提示"
 
+      scoring:
+        algorithm: "fuzzysort"
+        fields_weight:
+          id: 4
+          name: 3
+          labels: 2
+          summary: 2
+          content: 1  # 当启用内容搜索时
+      
+      lang_support:
+        chinese: "支持中文拼音模糊搜索，使用 pinyin-pro 库转换"
+        fallback: "英文字符直接进行模糊匹配"
 
     - name: "show"
       description: "显示模板内容。"
@@ -192,7 +237,6 @@ ac_project:
             branch: "main"
             path: "~/.ac/repos/<alias>"   # 可选；默认按规则拼接
         defaults:
-          repo: "<alias or empty>"
           dest: "."
           mode: "write"
           lang: "en"
@@ -204,7 +248,6 @@ ac_project:
           version: "v1.0.0"
           repos: []
           defaults:
-            repo: ""
             dest: "."
             mode: "write"
             lang: "zh"
@@ -218,7 +261,8 @@ ac_project:
     index:
       build: "扫描仓库中 **/*.y?(a)ml，解析模板头与正文，构建内存索引写到 ~/.ac/index.json 以加速。"
       fields_indexed: ["id", "type", "name", "labels", "summary", "absPath"]
-      deep_search: "当 --deep 时使用 ripgrep 对 YAML 正文（content/targets.content）做全文检索。"
+      search_engine: "使用 fuzzysort 进行模糊搜索，支持中文拼音转换。"
+      deep_search: "不再依赖 ripgrep，改用 fuzzysort 对模板内容进行全文检索。"
 
   # ------------------------------------------------------------
   # 模板规范（按类型区分）
@@ -248,18 +292,18 @@ ac_project:
 
     context:
       description: >
-        上下文模板：将一组目标文件写入项目。可在 path 与 content 中引用 `${repo.id}`；
+        上下文模板：将一组目标文件写入项目。
         允许复用 prompt 的内容（通过 apply 源或在 target 中声明引用）。
       schema:
         type: "context"
         targets:
-          - path: "目标文件路径（可含 ${repo.id}）"
+          - path: "目标文件路径"
             mode: "write | append | merge"
-            # 二选一或并用：
-            content: "原样写入的文本内容（可含 ${repo.id}）"
-            content_from_prompt: "<prompt-id>"   # 可选：复用已有 prompt 的 content
-            content_order: "content-first | prompt-first"   # 可选；默认 content-first；当同时提供 content 与 content_from_prompt 时拼接顺序
+            # 必须且只能选择其中一个：
+            content: "原样写入的文本内容"
+            content_from_prompt: "<prompt-id>"   # 复用已有 prompt 的 content
       notes:
+        - "content 与 content_from_prompt 只能二选一，不能同时使用。"
         - "content_from_prompt 只取对应 prompt 的 `content` 字段。"
         - "merge 仅保证对 JSON 文件的浅合并安全；YAML 合并可作为后续扩展。"
       example:
@@ -269,16 +313,15 @@ ac_project:
         labels: ["frontend", "rules", "cursor"]
         summary: "限制 pages/components 直连 services/stores，强制经 hooks。"
         targets:
-          - path: ".cursor/repos/${repo.id}/rules.md"
+          - path: ".cursor/rules.md"
             mode: "write"
             content: |
-              # Cursor 规则（来源：${repo.id}）
+              # Cursor 规则
               - pages/components 禁止直接 import services/stores
               - 统一从 src/hooks/* 引用业务逻辑
           - path: ".claude/prompt.md"
             mode: "write"
             content_from_prompt: "frontend-review-v1"
-            content_order: "prompt-first"
 
   # ------------------------------------------------------------
   # 应用逻辑（核心流程）
@@ -287,10 +330,9 @@ ac_project:
     steps:
       - "解析配置：按 global_args.config_resolution 获取项目或全局配置；若全局不存在则自动初始化。"
       - "解析来源：根据 --context / --prompt / --content / --stdin 选择内容来源。"
-      - "解析仓库：按 global_args.repo_selection 确定模板来源仓库 alias。"
+      - "解析仓库：当模板 ID 重复时，展示仓库列表让用户选择。"
       - "加载模板：读取并解析模板 YAML（prompt/context）。"
-      - "插值处理：对 context 的 targets[].path 与 targets[].content 执行 `${repo.id}` 替换。"
-      - "内容组装：当 target 同时含 content 与 content_from_prompt 时，按 content_order 组装文本。"
+      - "内容处理：使用 content 或 content_from_prompt 其中之一作为内容源。"
       - "dry-run：若启用，展示目标路径/模式/存在性/内容摘要或 JSON key 差异（merge）。"
       - "落地写入：按 mode 执行 write/append/merge（merge 为 JSON 浅合并）。"
     error_handling:
@@ -320,52 +362,66 @@ ac_project:
         labels: ["frontend", "rules", "cursor"]
         summary: "限制 pages/components 直连 services/stores，强制经 hooks。"
         targets:
-          - path: ".cursor/repos/${repo.id}/rules.md"
+          - path: ".cursor/rules.md"
             mode: "write"
             content: |
-              # Cursor 规则（来源：${repo.id}）
+              # Cursor 规则
               - pages/components 禁止直接 import services/stores
               - 统一从 src/hooks/* 引用业务逻辑
           - path: ".claude/prompt.md"
             mode: "write"
             content_from_prompt: "frontend-review-v1"
-            content_order: "prompt-first"
 
+  # ------------------------------------------------------------
+  # 技术实现架构
+  # ------------------------------------------------------------
   oclif_impl:
     overview: >
-      基于 TypeScript + oclif(v3) 实现。命令层仅负责参数解析与输出，领域逻辑位于 core/*，
-      基础设施适配（git/rg/fs/yaml/merge）位于 infra/*，类型与配置在 types/* 与 config/*。
+      基于 TypeScript + oclif(v3) + ink + React 实现现代化 CLI。
+      命令层仅负责参数解析与输出，领域逻辑位于 core/*，
+      基础设施适配（git/fs/yaml/merge/clipboard）位于 infra/*，
+      UI 组件位于 ui/*，类型与配置在 types/* 与 config/*。
+    
     tooling:
       node: "lts(22+)"
       package_manager: "pnpm"
       deps_runtime:
         - "@oclif/core": "CLI 框架"
+        - "ink": "React-based CLI UI"
+        - "react": "UI 组件库"
         - "js-yaml": "YAML 读写"
-        - "simple-git" : "Git 封装（或 child_process 调 git）"
+        - "simple-git": "Git 封装"
+        - "fuzzysort": "模糊搜索引擎，替代 ripgrep"
+        - "clipboardy": "系统剪切板操作"
+        - "pinyin-pro": "中文拼音转换"
       deps_dev:
         - "typescript": "TS 编译"
-        - "tsup": "打包（也可用 esbuild）"
         - "vitest": "单测"
+        - "@types/react": "React 类型定义"
+    
     tsconfig:
       resolution:
         - "@/* -> @/src/*"
       allowJs: false
       module: "CommonJS"
+    
     package_json_fields:
       bin:
         ac: "bin/run"
       oclif:
         commands: "dist/commands"
         bin: "ac"
+        default: "search"  # 默认命令
       scripts:
         - name: "build"
-          value: "tsup src/index.ts --format cjs --out-dir dist && tsup src/commands --format cjs --out-dir dist/commands --splitting"
+          value: "tsc -b"
         - name: "typecheck"
           value: "tsc --noEmit"
         - name: "dev"
           value: "tsx src/index.ts"
         - name: "test"
           value: "vitest"
+    
     dir_tree: |
       ac/
       ├─ bin/
@@ -381,25 +437,39 @@ ac_project:
       │  │  │  └─ remove.ts      # `ac repo remove`
       │  │  ├─ init.ts           # `ac init`
       │  │  ├─ apply.ts          # `ac apply`
-      │  │  └─ search.ts         # `ac search`
+      │  │  ├─ search.ts         # `ac search` (交互式搜索)
+      │  │  └─ show.ts           # `ac show`
+      │  ├─ ui/                  # ink + React UI 组件
+      │  │  ├─ SearchApp.tsx     # 主搜索界面组件
+      │  │  ├─ SearchInput.tsx   # 搜索输入框
+      │  │  ├─ ResultsList.tsx   # 搜索结果列表
+      │  │  ├─ DetailView.tsx    # 模板详情展示
+      │  │  ├─ ApplyConfirm.tsx  # Apply 确认界面
+      │  │  └─ hooks/            # 自定义 hooks
+      │  │     ├─ useSearch.ts   # 搜索逻辑
+      │  │     ├─ useKeyboard.ts # 键盘事件处理
+      │  │     └─ useClipboard.ts # 剪切板操作
       │  ├─ core/                # 领域逻辑（业务核心）
       │  │  ├─ config.service.ts   # 配置解析：逐级查找 .ac.yaml / 全局 ~/.ac/config.yaml
       │  │  ├─ repo.service.ts     # repo 管理逻辑（add/list/update/remove）
       │  │  ├─ template.service.ts # 加载/解析模板 (prompt/context)
-      │  │  ├─ search.service.ts   # 索引/rg 搜索，结果打分
+      │  │  ├─ search.service.ts   # fuzzysort 搜索，结果打分
       │  │  └─ apply.service.ts    # 落地写入、dry-run、${repo.id} 插值
       │  ├─ config/
       │  │  ├─ constants.ts      # 常量（APP 名称、默认路径）
       │  │  └─ paths.ts          # 路径拼接与 ~ 展开
       │  ├─ types/
       │  │  ├─ config.ts         # 配置文件类型定义 (.ac.yaml / config.yaml)
-      │  │  └─ repo-template.ts  # 模板类型定义 (Header/PromptDoc/ContextDoc)
+      │  │  ├─ template.ts       # 模板类型定义 (Header/PromptDoc/ContextDoc)
+      │  │  └─ ui.ts             # UI 相关类型定义
       │  ├─ infra/               # 基础设施适配层
       │  │  ├─ git.ts            # Git 操作封装 (clone/pull/status)
-      │  │  ├─ rg.ts             # ripgrep 调用封装
+      │  │  ├─ fuzzysort.ts      # fuzzysort 搜索封装
+      │  │  ├─ pinyin.ts         # 中文拼音转换
       │  │  ├─ yaml.ts           # YAML 读写
       │  │  ├─ fs.ts             # FS 工具：mkdirp、原子写、exists
       │  │  ├─ json-merge.ts     # JSON 浅合并
+      │  │  ├─ clipboard.ts      # 系统剪切板操作
       │  │  └─ logger.ts         # 日志接口
       │  ├─ presentation/
       │  │  └─ table.ts          # 输出格式化（列表/搜索结果表格）
@@ -407,47 +477,146 @@ ac_project:
       │     ├─ config.test.ts
       │     ├─ repo.test.ts
       │     ├─ apply.test.ts
-      │     └─ search.test.ts
+      │     ├─ search.test.ts
+      │     └─ ui.test.ts
       ├─ package.json
       └─ tsconfig.json
+    
     command_wiring_flow:
       - "命令解析（oclif flags/args）"
       - "resolveConfig：确定项目或全局配置"
       - "resolveRepo：确定仓库 alias（若需要）"
       - "执行核心服务（repo/template/search/apply）"
-      - "呈现结果（stdout/表格；dry-run 预览）"
+      - "呈现结果（ink UI 或 stdout/表格；dry-run 预览）"
+    
     cross_platform_notes:
-      - "需要系统已安装 git；ripgrep 可选但建议安装（启用 --deep 才用）。"
+      - "需要系统已安装 git；不再依赖 ripgrep。"
       - "路径与权限：Windows/Unix 路径差异由 fs 工具层屏蔽。"
+      - "剪切板操作：使用 clipboardy 跨平台支持。"
+    
     error_handling:
       - "找不到命令时, 提示命令不存在, 并且默认输出 help 信息"
       - "找不到模板 id → 友好错误并提示 `ac search`。"
       - "merge 非 JSON → 明确报错并建议使用 write/append。"
       - "仓库不存在或未配置 → 提示 `ac repo add` 或在 init 时写入。"
+      - "content_from_prompt 引用的 prompt 不存在 → 明确报错并列出可用 prompt。"
+      - "目标文件权限不足 → 提示权限问题并建议解决方案。"
+      - "磁盘空间不足 → 友好提示并建议清理空间。"
+      - "网络连接问题 → 优雅降级，使用本地缓存。"
+      - "模板文件格式错误 → 详细报错并指出具体行号。"
 
+  # ------------------------------------------------------------
+  # 国际化支持（强制要求）
+  # ------------------------------------------------------------
   i18n_support:
     purpose: >
       CLI 在输出 log / 提示信息时，根据系统语言或配置文件中的默认语言来决定语言环境。
       优先级：命令行 flag > 配置文件 defaults.lang > 系统环境变量 LANG/LC_ALL > 默认 en。
+      **强制要求：所有用户可见文本必须通过 i18n 函数处理，禁止硬编码任何文本。**
+    
     detection_order:
       - ".ac.yaml 或 ~/.ac/config.yaml 中的 defaults.lang"
       - "系统环境变量 LANG, LC_ALL, LC_MESSAGES"
       - "默认 en"
+    
     config_key:
       path: "defaults.lang"
       type: "string"
       example: "en 或 zh"
+    
+    enforcement_rules:
+      - "所有 console.log、error message、UI 文本必须使用 t() 函数"
+      - "所有 ink 组件中的文本必须国际化"
+      - "快捷键提示、帮助信息、错误提示全部国际化"
+      - "代码审查时检查是否存在硬编码文本"
+    
     json_format:
       en.json:
+        # 通用
+        common.yes: "Yes"
+        common.no: "No"
+        common.cancel: "Cancel"
+        common.confirm: "Confirm"
+        common.loading: "Loading..."
+        
+        # 搜索界面
+        search.title: "AC Template Search"
+        search.placeholder: "Type to search templates..."
+        search.no_results: "No templates found"
+        search.results_count: "{count} templates found"
+        
+        # 快捷键提示
+        shortcuts.navigation: "Navigation: ↑↓ or Ctrl+K/J"
+        shortcuts.apply: "Ctrl+A: Apply template"
+        shortcuts.show: "Ctrl+S: Show details"
+        shortcuts.yank: "Ctrl+Y: Copy to clipboard"
+        shortcuts.exit: "Esc: Exit"
+        
+        # Apply 相关
+        apply.context.title: "Apply Context Template"
+        apply.context.files_affected: "Files that will be affected:"
+        apply.prompt.title: "Apply Prompt Template"
+        apply.prompt.enter_dest: "Enter destination file path:"
+        apply.success: "Template applied successfully"
+        apply.cancelled: "Apply cancelled"
+        
+        # 错误信息
+        error.template_not_found: "Template '{id}' not found. Use 'ac search' to find templates."
+        error.repo_not_configured: "No repositories configured. Use 'ac repo add' to add one."
+        error.clipboard_failed: "Failed to copy to clipboard"
+        
+        # 仓库管理
         repo.add.success: "Repository {alias} added successfully."
         repo.add.exists: "Repository {alias} already exists."
+        repo.list.empty: "No repositories configured."
+        
+        # 配置
         config.notfound: "No config file found, initializing default config..."
-        "...": "..."
+        config.created: "Configuration file created: {path}"
+      
       zh.json:
+        # 通用
+        common.yes: "是"
+        common.no: "否"
+        common.cancel: "取消"
+        common.confirm: "确认"
+        common.loading: "加载中..."
+        
+        # 搜索界面
+        search.title: "AC 模板搜索"
+        search.placeholder: "输入关键词搜索模板..."
+        search.no_results: "未找到匹配的模板"
+        search.results_count: "找到 {count} 个模板"
+        
+        # 快捷键提示
+        shortcuts.navigation: "导航: ↑↓ 或 Ctrl+K/J"
+        shortcuts.apply: "Ctrl+A: 应用模板"
+        shortcuts.show: "Ctrl+S: 显示详情"
+        shortcuts.yank: "Ctrl+Y: 复制到剪切板"
+        shortcuts.exit: "Esc: 退出"
+        
+        # Apply 相关
+        apply.context.title: "应用上下文模板"
+        apply.context.files_affected: "将要影响的文件："
+        apply.prompt.title: "应用提示词模板"
+        apply.prompt.enter_dest: "输入目标文件路径："
+        apply.success: "模板应用成功"
+        apply.cancelled: "已取消应用"
+        
+        # 错误信息
+        error.template_not_found: "未找到模板 '{id}'。使用 'ac search' 来查找模板。"
+        error.repo_not_configured: "未配置仓库。使用 'ac repo add' 添加仓库。"
+        error.clipboard_failed: "复制到剪切板失败"
+        
+        # 仓库管理
         repo.add.success: "仓库 {alias} 添加成功。"
         repo.add.exists: "仓库 {alias} 已存在。"
+        repo.list.empty: "未配置任何仓库。"
+        
+        # 配置
         config.notfound: "未找到配置文件，正在初始化默认配置..."
-        "...": "..."
+        config.created: "配置文件已创建：{path}"
+    
     translator_core:
       code: |
         // src/i18n/index.ts
@@ -469,14 +638,19 @@ ac_project:
           current = dicts[short] ? short : 'en'
         }
 
-        export function t(key: string, params?: Record<string, string>): string {
+        export function t(key: string, params?: Record<string, string | number>): string {
           const template = dicts[current][key] || dicts['en'][key] || key
           if (!params) return template
           return Object.entries(params).reduce(
-            (msg, [k, v]) => msg.replace(`{${k}}`, v),
+            (msg, [k, v]) => msg.replace(`{${k}}`, String(v)),
             template
           )
         }
+
+        // 强制类型检查，确保所有 key 都存在于字典中
+        export type I18nKey = keyof typeof en
+        export const tt = (key: I18nKey, params?: Record<string, string | number>): string => t(key, params)
+    
     file_structure: |
       src/
       ├─ i18n/
@@ -485,12 +659,139 @@ ac_project:
       │  └─ index.ts        # i18n loader，读取 flag/config/env 并选择语言
       └─ infra/
          └─ logger.ts       # log 封装，内部调用 i18n.t()
+    
     usage_flow:
       - "命令入口 parse flags"
       - "resolveConfig() 读取配置文件，提取 defaults.lang"
       - "initI18n(langFlag, config.defaults.lang, systemLang)"
-      - "logger.t(key, params) 输出对应语言"
+      - "所有用户可见文本通过 t(key, params) 输出对应语言"
+    
     accept_checklist:
       - "ac <command> --help 输出支持国际化"
       - "命令支持 --lang 指定语言"
       - "支持 zh 和 en 两种语言"
+      - "所有硬编码文本已移除，使用 i18n 函数"
+      - "ink UI 组件中的文本全部国际化"
+      - "错误信息、提示信息全部国际化"
+
+  # ------------------------------------------------------------
+  # 新增：交互式搜索详细规范
+  # ------------------------------------------------------------
+  interactive_search_spec:
+    ui_layout:
+      header:
+        - "显示应用标题和当前搜索状态"
+        - "显示快捷键提示（根据当前选中项类型动态显示）"
+      
+      search_input:
+        - "实时搜索输入框，支持中文输入"
+        - "显示搜索关键词和光标位置"
+        - "支持退格、清空等基本编辑操作"
+      
+      results_area:
+        - "最多显示 10 行搜索结果"
+        - "表格形式：Type | ID | Name | Repo | Labels | Summary"
+        - "高亮当前选中行"
+        - "显示结果总数和当前页信息"
+      
+      footer:
+        - "动态显示可用快捷键（基于当前选中项类型）"
+        - "显示状态信息（加载中、错误等）"
+    
+    search_behavior:
+      real_time:
+        - "每次按键后触发搜索（防抖 300ms）"
+        - "不需要按回车确认搜索"
+        - "支持中文拼音模糊搜索"
+      
+      fuzzy_matching:
+        - "使用 fuzzysort 进行模糊匹配"
+        - "支持拼音首字母匹配（如 'qd' 匹配 '前端'）"
+        - "支持部分字符匹配和跳跃匹配"
+      
+      result_ranking:
+        - "按匹配度排序，精确匹配优先"
+        - "ID 匹配权重最高，其次是 name，然后是 labels 和 summary"
+        - "最近使用的模板可以提升排序权重"
+    
+    keyboard_interaction:
+      input_mode:
+        - "默认处于输入模式，直接输入搜索关键词"
+        - "支持中文输入法"
+        - "Backspace: 删除字符"
+        - "Ctrl+U: 清空输入"
+      
+      navigation_mode:
+        - "Ctrl+J / ↓: 向下移动"
+        - "Ctrl+K / ↑: 向上移动"
+        - "Home: 移动到第一项"
+        - "End: 移动到最后一项"
+      
+      action_mode:
+        - "Enter: 选择当前项（默认行为，可配置）"
+        - "Ctrl+A: Apply 模板"
+        - "Ctrl+S: Show 详情"
+        - "Ctrl+Y: Yank 内容（仅 prompt）"
+        - "Escape / Ctrl+C: 退出"
+    
+    apply_workflow:
+      context_template:
+        steps:
+          - "显示将要创建/修改的文件列表"
+          - "显示每个文件的操作模式（write/append/merge）"
+          - "用户确认后执行 apply 操作"
+          - "显示操作结果和受影响的文件"
+      
+      prompt_template:
+        steps:
+          - "提示用户输入目标文件路径"
+          - "支持相对路径（相对于配置根目录）"
+          - "支持 Tab 补全文件路径"
+          - "确认后执行写入操作"
+    
+    clipboard_integration:
+      supported_content:
+        - "prompt 类型模板的 content 字段"
+        - "context 类型模板的完整 YAML 内容"
+      
+      feedback:
+        - "复制成功后显示提示信息"
+        - "复制失败时显示错误信息"
+        - "显示复制的内容长度"
+
+  # ------------------------------------------------------------
+  # 性能优化和用户体验
+  # ------------------------------------------------------------
+  performance_optimization:
+    search_performance:
+      - "索引预加载：启动时异步加载模板索引"
+      - "搜索防抖：300ms 防抖避免过频繁搜索"
+      - "结果缓存：相同搜索词缓存结果"
+      - "增量更新：仅在索引变化时重新搜索"
+    
+    ui_responsiveness:
+      - "虚拟滚动：大量结果时使用虚拟滚动"
+      - "懒加载：模板内容按需加载"
+      - "异步操作：文件操作不阻塞 UI"
+      - "加载状态：显示加载指示器"
+    
+    memory_management:
+      - "及时清理：退出时清理事件监听器"
+      - "内存限制：限制缓存大小"
+      - "垃圾回收：定期清理无用缓存"
+
+  user_experience:
+    accessibility:
+      - "键盘导航：完全支持键盘操作"
+      - "颜色对比：确保足够的颜色对比度"
+      - "屏幕阅读器：支持屏幕阅读器"
+    
+    error_recovery:
+      - "网络错误：优雅处理网络连接问题"
+      - "文件错误：处理文件权限和路径问题"
+      - "配置错误：自动修复常见配置问题"
+    
+    help_system:
+      - "上下文帮助：根据当前状态显示相关帮助"
+      - "快捷键提示：动态显示可用快捷键"
+      - "错误指导：错误时提供解决建议"

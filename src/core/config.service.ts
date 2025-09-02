@@ -1,5 +1,5 @@
 /**
- * 配置服务 - 逐级查找和管理配置文件
+ * Configuration Service - Hierarchical config file lookup and management
  */
 
 import { readYamlFile, writeYamlFile } from '../infra/yaml'
@@ -24,6 +24,7 @@ import {
   RepoNotFoundError 
 } from '../types/errors'
 import { logger } from '../infra/logger'
+import { t } from '../i18n'
 
 /**
  * 配置服务类
@@ -59,7 +60,7 @@ export class ConfigService {
           config: projectConfig
         }
       } catch (error: any) {
-        logger.warn(`项目配置文件损坏，回退到全局配置: ${error.message}`)
+        logger.warn(t('config.project_config_corrupted', { error: error.message }))
       }
     }
     
@@ -78,7 +79,7 @@ export class ConfigService {
   async loadProjectConfig(configPath: string): Promise<ProjectConfig> {
     if (!await fileExists(configPath)) {
       throw new ConfigNotFoundError(
-        `项目配置文件不存在: ${configPath}`
+        t('error.file.not_found', { path: configPath })
       )
     }
     
@@ -98,7 +99,7 @@ export class ConfigService {
       return normalizedConfig
     } catch (error: any) {
       throw new ConfigValidationError(
-        `项目配置文件格式错误: ${configPath} - ${error.message}`
+        t('config.invalid', { error: `${configPath} - ${error.message}` })
       )
     }
   }
@@ -108,7 +109,7 @@ export class ConfigService {
    */
   async getGlobalConfig(): Promise<GlobalConfig> {
     if (!await fileExists(GLOBAL_CONFIG_PATH)) {
-      logger.debug('全局配置文件不存在，正在创建默认配置')
+      logger.debug(t('config.creating_default_global_config'))
       await this.createDefaultGlobalConfig()
     }
     
@@ -127,7 +128,7 @@ export class ConfigService {
       
       return normalizedConfig
     } catch (error: any) {
-      logger.warn(`全局配置文件损坏，正在重新创建: ${error.message}`)
+      logger.warn(t('config.project_config_corrupted', { error: error.message }))
       await this.createDefaultGlobalConfig()
       return await readYamlFile<GlobalConfig>(GLOBAL_CONFIG_PATH)
     }
@@ -139,7 +140,7 @@ export class ConfigService {
   async createDefaultGlobalConfig(): Promise<void> {
     await ensureDir(AC_HOME)
     await writeYamlFile(GLOBAL_CONFIG_PATH, DEFAULT_CONFIG)
-    logger.debug(`默认全局配置已创建: ${GLOBAL_CONFIG_PATH}`)
+    logger.debug(t('config.created', { path: GLOBAL_CONFIG_PATH }))
   }
   
   /**
@@ -148,7 +149,7 @@ export class ConfigService {
   private validateConfig(config: ProjectConfig | GlobalConfig): void {
     // 检查必需字段
     if (!config.version || !config.repos || !config.defaults) {
-      throw new Error('配置文件缺少必需字段: version, repos, defaults')
+      throw new Error(t('config.invalid', { error: 'missing required fields: version, repos, defaults' }))
     }
     
     // 检查版本兼容性
@@ -156,19 +157,19 @@ export class ConfigService {
     
     // 验证仓库配置
     if (!Array.isArray(config.repos)) {
-      throw new Error('repos 字段必须是数组')
+      throw new Error(t('config.invalid', { error: 'repos must be an array' }))
     }
     
     for (const repo of config.repos) {
       if (!repo.name || !repo.git || !repo.branch) {
-        throw new Error('仓库配置缺少必需字段: name, git, branch')
+        throw new Error(t('config.invalid', { error: 'repo missing fields: name, git, branch' }))
       }
     }
     
     // 验证默认配置
     const { defaults } = config
     if (!defaults.mode || !['write', 'append', 'merge'].includes(defaults.mode)) {
-      throw new Error('defaults.mode 必须是 write, append 或 merge')
+      throw new Error(t('config.invalid', { error: 'defaults.mode must be write|append|merge' }))
     }
   }
   
@@ -182,10 +183,10 @@ export class ConfigService {
     try {
       this.validateConfig(config)
       await writeYamlFile(configPath, config)
-      logger.debug(`配置已保存: ${configPath}`)
+      logger.debug(t('config.created', { path: configPath }))
     } catch (error: any) {
       throw new ConfigValidationError(
-        `保存配置失败: ${configPath} - ${error.message}`
+        t('error.file.write_failed', { path: `${configPath} - ${error.message}` })
       )
     }
   }
@@ -202,9 +203,7 @@ export class ConfigService {
     // 检查仓库是否已存在
     const existingRepo = config.repos.find(r => r.name === repo.name)
     if (existingRepo) {
-      throw new ConfigValidationError(
-        `仓库别名已存在: ${repo.name}`
-      )
+      throw new ConfigValidationError(t('repo.add.exists', { name: repo.name }))
     }
     
     // 添加仓库
@@ -231,9 +230,7 @@ export class ConfigService {
     // 查找仓库
     const repoIndex = config.repos.findIndex(r => r.name === repoName)
     if (repoIndex === -1) {
-      throw new RepoNotFoundError(
-        `仓库不存在: ${repoName}`
-      )
+      throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
     // 移除仓库
@@ -261,9 +258,7 @@ export class ConfigService {
     // 查找仓库
     const repo = config.repos.find(r => r.name === repoName)
     if (!repo) {
-      throw new RepoNotFoundError(
-        `仓库不存在: ${repoName}`
-      )
+      throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
     // 更新仓库配置
@@ -304,9 +299,7 @@ export class ConfigService {
       return config.repos[0]
     }
     
-    throw new RepoNotFoundError(
-      '没有可用的仓库。使用 \'ac repo add <git-url>\' 添加仓库'
-    )
+    throw new RepoNotFoundError(t('repo.list.no_repos'))
   }
   
   /**
@@ -322,7 +315,7 @@ export class ConfigService {
     const config = resolvedConfig.config
     
     return {
-      source: resolvedConfig.source === 'project' ? '项目配置' : '全局配置',
+      source: resolvedConfig.source === 'project' ? t('config.source.project') : t('config.source.global'),
       path: resolvedConfig.path,
       repoCount: config.repos.length,
       defaultRepo: config.defaults.repo || undefined,

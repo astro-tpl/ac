@@ -1,75 +1,69 @@
 /**
- * Search 命令 - 搜索模板
+ * Search Command - Search templates with modern UI
  */
 
+import React from 'react'
 import { Args, Flags } from '@oclif/core'
-import { BaseCommand } from './base'
+import { BaseCommand } from '../base/base'
 import { searchService } from '../core/search.service'
 import { logger } from '../infra/logger'
 import { t } from '../i18n'
-import { renderTable, formatRelativeTime } from '../presentation/table'
-import { startInteractiveSearch, getInteractiveSearchHelp } from '../infra/interactive-search'
-import Show from './show'
+import { renderTable } from '../presentation/table'
+import { SearchApp } from '../ui/SearchApp'
+import { table } from 'table'
 
 export default class Search extends BaseCommand {
-  static override description = '按关键字/类型/标签搜索模板；必要时可深搜正文'
+  static override description = t('commands.search.description')
 
   static override examples = [
     '<%= config.bin %> <%= command.id %>',
     '<%= config.bin %> <%= command.id %> react',
     '<%= config.bin %> <%= command.id %> --type context',
     '<%= config.bin %> <%= command.id %> --label frontend',
-    '<%= config.bin %> <%= command.id %> react --deep',
-    '<%= config.bin %> <%= command.id %> --repo templates'
+    '<%= config.bin %> <%= command.id %> react --interactive',
+    '<%= config.bin %> <%= command.id %> --repo templates',
+    '<%= config.bin %> <%= command.id %> --stats'
   ]
 
   static override args = {
     keyword: Args.string({
-      description: '搜索关键字（可为空，仅用过滤器筛选）',
+      description: t('commands.search.args.keyword'),
       required: false
     })
   }
 
   static override flags = {
     type: Flags.string({
-      description: '按类型过滤模板',
+      description: t('commands.search.flags.type'),
       options: ['context', 'prompt']
     }),
     label: Flags.string({
-      description: '按标签过滤（支持多个，用逗号分隔）',
+      description: t('commands.search.flags.label'),
       multiple: true,
       char: 'l'
     }),
-    deep: Flags.boolean({
-      description: '触发 ripgrep 对模板正文内容进行深度搜索',
-      default: false
-    }),
     repo: Flags.string({
-      description: '指定搜索的仓库别名'
+      description: t('commands.search.flags.repo')
     }),
     global: Flags.boolean({
-      description: '搜索全局配置中的仓库',
+      description: t('commands.search.flags.global'),
       default: false
     }),
     'max-results': Flags.integer({
-      description: '最大结果数量',
+      description: t('commands.search.flags.max_results'),
       default: 20
     }),
-    'case-sensitive': Flags.boolean({
-      description: '大小写敏感搜索',
-      default: false
-    }),
     stats: Flags.boolean({
-      description: '显示搜索统计信息',
+      description: t('commands.search.flags.stats'),
       default: false
     }),
     interactive: Flags.boolean({
-      description: '启用交互式搜索界面',
+      description: t('commands.search.flags.interactive'),
       char: 'i',
       default: false
     }),
-    table: Flags.boolean({
-      description: '使用表格格式显示结果',
+    'no-ui': Flags.boolean({
+      description: 'Disable interactive UI and show results in table format',
       default: false
     })
   }
@@ -83,17 +77,26 @@ export default class Search extends BaseCommand {
         await this.showStats(flags.global)
         return
       }
-      
+
+      // 如果没有关键词且启用交互式模式（或默认行为）
+      if (!args.keyword && (flags.interactive || !flags['no-ui'])) {
+        await this.startInteractiveSearch({
+          type: flags.type as 'prompt' | 'context' | undefined,
+          labels: flags.label || [],
+          repo: flags.repo
+        })
+        return
+      }
+
       // 执行搜索
       const results = await searchService.searchTemplates({
-        keyword: args.keyword,
+        keyword: args.keyword || '',
         type: flags.type as 'prompt' | 'context' | undefined,
         labels: flags.label || [],
-        deep: flags.deep,
         repoName: flags.repo,
         forceGlobal: flags.global,
         maxResults: flags['max-results'],
-        caseSensitive: flags['case-sensitive']
+        enablePinyin: true
       })
       
       if (results.length === 0) {
@@ -109,26 +112,108 @@ export default class Search extends BaseCommand {
       }
       
       // 交互式搜索
-      if (flags.interactive) {
-        await this.handleInteractiveSearch(results)
+      if (flags.interactive && !flags['no-ui']) {
+        await this.startInteractiveSearch({
+          initialQuery: args.keyword,
+          type: flags.type as 'prompt' | 'context' | undefined,
+          labels: flags.label || [],
+          repo: flags.repo
+        })
         return
       }
       
-      // 显示搜索结果
-      if (flags.table) {
-        this.displayResultsAsTable(results)
-      } else {
-        this.displayResults(results, {
-          keyword: args.keyword,
-          showScore: false, // 根据规格要求，分数仅用于排序不显示
-          deep: flags.deep
-        })
-      }
+      // 默认使用表格格式显示搜索结果
+      this.displayResultsAsTable(results)
       
     } catch (error: any) {
-      logger.error('搜索失败', error)
+      logger.error(t('search.failed'), error)
       this.exit(1)
     }
+  }
+
+  /**
+   * 启动交互式搜索界面
+   */
+  private async startInteractiveSearch(options: {
+    initialQuery?: string
+    type?: 'prompt' | 'context'
+    labels?: string[]
+    repo?: string
+  }): Promise<void> {
+    return new Promise(async (resolve, reject) => {
+      let hasExited = false
+
+      const handleExit = () => {
+        if (!hasExited) {
+          hasExited = true
+          resolve()
+        }
+      }
+
+      const handleApplyComplete = (success: boolean, error?: string) => {
+        if (success) {
+          logger.success('Template applied successfully!')
+        } else {
+          logger.error(`Apply failed: ${error}`)
+        }
+      }
+
+      try {
+        const { render } = await import('ink')
+        
+        const { unmount } = render(
+          React.createElement(SearchApp, {
+            initialQuery: options.initialQuery,
+            searchOptions: {
+              type: options.type,
+              labels: options.labels,
+              repo: options.repo
+            },
+            onApplyComplete: handleApplyComplete,
+            onExit: handleExit
+          })
+        )
+
+        // 处理进程退出
+        const cleanup = () => {
+          if (!hasExited) {
+            hasExited = true
+            unmount()
+            resolve()
+          }
+        }
+
+        process.on('SIGINT', cleanup)
+        process.on('SIGTERM', cleanup)
+        
+        // 清理监听器
+        process.once('exit', () => {
+          process.removeListener('SIGINT', cleanup)
+          process.removeListener('SIGTERM', cleanup)
+        })
+
+      } catch (error) {
+        if (!hasExited) {
+          hasExited = true
+          logger.error(`Failed to start interactive search: ${error}`)
+          logger.info('Falling back to table output mode.')
+          // 回退到表格模式
+          try {
+            const results = await searchService.searchTemplates({
+              keyword: options.initialQuery || '',
+              type: options.type,
+              labels: options.labels,
+              repoName: options.repo,
+              enablePinyin: true
+            })
+            this.displayResultsAsTable(results)
+          } catch (fallbackError) {
+            logger.error('Failed to display results in table mode.')
+          }
+          resolve()
+        }
+      }
+    })
   }
   
   /**
@@ -138,15 +223,15 @@ export default class Search extends BaseCommand {
     try {
       const stats = await searchService.getSearchStats({ forceGlobal })
       
-      logger.info('模板库统计信息:')
+      logger.info(t('search.stats.title'))
       logger.plain('')
-      logger.plain(`总模板数: ${stats.totalTemplates}`)
-      logger.plain(`Prompt 模板: ${stats.promptCount}`)
-      logger.plain(`Context 模板: ${stats.contextCount}`)
+      logger.plain(t('search.stats.total', { count: stats.totalTemplates }))
+      logger.plain(t('search.stats.prompt', { count: stats.promptCount }))
+      logger.plain(t('search.stats.context', { count: stats.contextCount }))
       logger.plain('')
       
       if (stats.repoStats.length > 0) {
-        logger.plain('各仓库统计:')
+        logger.plain(t('search.stats.by_repo'))
         
         const tableData = stats.repoStats.map(repo => ({
           name: repo.name,
@@ -157,164 +242,18 @@ export default class Search extends BaseCommand {
         }))
         
         const table = renderTable(tableData, [
-          { header: '仓库', key: 'name', align: 'left' },
-          { header: '模板数', key: 'count', align: 'right' },
-          { header: '占比', key: 'percentage', align: 'right' }
+          { header: t('search.stats.repo_header'), key: 'name', align: 'left' },
+          { header: t('search.stats.count_header'), key: 'count', align: 'right' },
+          { header: t('search.stats.percentage_header'), key: 'percentage', align: 'right' }
         ])
         
         logger.plain(table)
       } else {
-        logger.info('没有配置任何仓库')
+        logger.info(t('search.stats.no_repos'))
       }
       
     } catch (error: any) {
-      logger.error('获取统计信息失败', error)
-    }
-  }
-  
-  /**
-   * 显示搜索结果 - 按规格第139行要求的格式：score  type  id  name — summary  [labels...]
-   */
-  private displayResults(
-    results: Array<{
-      score: number
-      template: {
-        id: string
-        type: string
-        name: string
-        labels: string[]
-        summary: string
-        repoName: string
-      }
-      matchedFields: string[]
-    }>,
-    options: {
-      keyword?: string
-      showScore: boolean
-      deep: boolean
-    }
-  ): void {
-    const { keyword, showScore, deep } = options
-    
-    // 显示搜索信息
-    let searchInfo = t('search.found', { count: results.length })
-    if (keyword) {
-      searchInfo += ` (${t('search.keyword', { keyword })})`
-    }
-    if (deep) {
-      searchInfo += ` ${t('search.deep')}`
-    }
-    
-    logger.success(searchInfo)
-    logger.plain('')
-    
-    // 按规格要求的格式显示结果
-    results.forEach(result => {
-      const { template, score } = result
-      
-      // 构建输出行：score  type  id  name — summary  [labels...]
-      let line = ''
-      
-      // 得分（如果显示）
-      if (showScore) {
-        line += `${score.toFixed(1).padStart(5)} `
-      }
-      
-      // 类型
-      const typeIcon = template.type === 'prompt' ? '📝' : '📦'
-      const typeName = template.type === 'prompt' ? 'prompt' : 'context'
-      line += `${typeIcon} ${typeName.padEnd(7)} `
-      
-      // ID
-      line += `${template.id.padEnd(20)} `
-      
-      // 名称
-      line += `${template.name.padEnd(25)} `
-      
-      // 分隔符和描述
-      const summary = template.summary || '(无描述)'
-      line += `— ${summary} `
-      
-      // 标签
-      if (template.labels.length > 0) {
-        line += `[${template.labels.join(', ')}]`
-      }
-      
-      logger.plain(line)
-    })
-    
-    logger.plain('')
-    
-    // 显示使用提示
-    if (results.length > 0) {
-      const firstResult = results[0]
-      logger.info(t('search.usage.title'))
-      
-      if (firstResult.template.type === 'prompt') {
-        logger.plain(`  ${t('search.usage.prompt', { id: firstResult.template.id })}`)
-      } else {
-        logger.plain(`  ${t('search.usage.context', { id: firstResult.template.id })}`)
-      }
-      
-      logger.plain(`  ${t('search.usage.help')}`)
-    }
-  }
-  
-  /**
-   * 处理交互式搜索
-   */
-  private async handleInteractiveSearch(results: Array<{
-    score: number
-    template: {
-      id: string
-      type: string
-      name: string
-      labels: string[]
-      summary: string
-      repoName: string
-    }
-    matchedFields: string[]
-  }>): Promise<void> {
-    try {
-      // 显示帮助信息
-      logger.plain(getInteractiveSearchHelp())
-      
-      // 启动交互式选择
-      const selectedResult = await startInteractiveSearch({ results })
-      
-      if (!selectedResult) {
-        logger.info(t('common.cancel'))
-        return
-      }
-      
-      // 调用 show 命令显示选中的模板
-      logger.plain('')
-      logger.info(`${t('search.interactive.selected')}: ${selectedResult.template.id}`)
-      logger.plain('')
-      
-      // 创建 show 命令实例并运行
-      const showArgs = [selectedResult.template.id]
-      const showFlags: any = {}
-      
-      if (selectedResult.template.repoName) {
-        showFlags.repo = selectedResult.template.repoName
-      }
-      
-      const showCommand = new Show(showArgs, this.config)
-      
-      // 手动设置解析后的参数
-      ;(showCommand as any).parsedArgs = { id: selectedResult.template.id }
-      ;(showCommand as any).parsedFlags = showFlags
-      
-      await showCommand.run()
-      
-    } catch (error: any) {
-      if (error.message?.includes('User force closed')) {
-        // 用户取消
-        logger.info(t('common.cancel'))
-        return
-      }
-      throw error
+      logger.error(t('search.stats.failed'), error)
     }
   }
   
@@ -336,29 +275,46 @@ export default class Search extends BaseCommand {
     logger.success(t('search.found', { count: results.length }))
     logger.plain('')
     
-    const tableData = results.map(result => {
-      const { template } = result
-      const typeIcon = template.type === 'prompt' ? '📝' : '📦'
-      
-      return {
-        type: `${typeIcon} ${template.type}`,
-        id: template.id,
-        name: template.name,
-        summary: template.summary || t('common.no_description'),
-        labels: template.labels.join(', ') || '-'
-      }
+    // 准备表格数据
+    const tableData = [
+      // 表头
+      ['Type', 'ID', 'Name', 'Summary', 'Labels', 'Repository'],
+      // 数据行
+      ...results.map(result => {
+        const { template } = result
+        const typeIcon = template.type === 'prompt' ? '📝' : '📦'
+        const typeDisplay = `${typeIcon} ${template.type}`
+        const summary = template.summary || t('common.no_description')
+        const labels = template.labels.length > 0 ? template.labels.join(', ') : '-'
+        
+        return [
+          typeDisplay, 
+          template.id, 
+          template.name, 
+          summary, 
+          labels,
+          template.repoName
+        ]
+      })
+    ]
+    
+    // 使用 table 包渲染表格
+    const output = table(tableData, {
+      header: {
+        alignment: 'center',
+        content: `Search Results (${results.length} found)`
+      },
+      columns: [
+        { alignment: 'left', width: 12 },   // Type
+        { alignment: 'left', width: 18 },   // ID
+        { alignment: 'left', width: 22 },   // Name
+        { alignment: 'left', width: 35 },   // Summary
+        { alignment: 'left', width: 18 },   // Labels
+        { alignment: 'left', width: 15 }    // Repository
+      ]
     })
     
-    const table = renderTable(tableData, [
-      { header: 'Type', key: 'type', width: 12, align: 'left' },
-      { header: 'ID', key: 'id', width: 20, align: 'left' },
-      { header: 'Name', key: 'name', width: 25, align: 'left' },
-      { header: 'Summary', key: 'summary', width: 40, align: 'left' },
-      { header: 'Labels', key: 'labels', width: 20, align: 'left' }
-    ])
-    
-    logger.plain(table)
-    logger.plain('')
+    logger.plain(output)
     
     // 显示使用提示
     if (results.length > 0) {
@@ -372,7 +328,8 @@ export default class Search extends BaseCommand {
       }
       
       logger.plain(`  ${t('search.usage.help')}`)
-      logger.plain(`  ac search -i  # ${t('search.interactive.help.title').replace(':', '')}`)
+      logger.plain(`  ac search -i  # Start interactive search`)
+      logger.plain(`  ac show ${firstResult.template.id}  # View template details`)
     }
   }
 }

@@ -4,7 +4,7 @@
  */
 
 import { Args, Flags } from '@oclif/core'
-import { BaseCommand } from './base'
+import { BaseCommand } from '../base/base'
 import { configService } from '../core/config.service'
 import { templateService } from '../core/template.service'
 import { searchService } from '../core/search.service'
@@ -14,7 +14,9 @@ import { renderTable, renderKeyValue } from '../presentation/table'
 import { Template, PromptTemplate, ContextTemplate } from '../types/template'
 
 export default class Show extends BaseCommand {
-  static override description = '显示模板内容'
+  static override description = t('commands.show.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %> cursor-default',
@@ -26,23 +28,23 @@ export default class Show extends BaseCommand {
 
   static override args = {
     id: Args.string({
-      description: '模板 ID',
+      description: t('commands.show.args.id'),
       required: true
     })
   }
 
   static override flags = {
     repo: Flags.string({
-      description: '在多仓场景下显式指定模板来源仓库的别名',
+      description: t('commands.show.flags.repo'),
       helpValue: 'templates'
     }),
     output: Flags.string({
-      description: '输出指定路径的属性值',
+      description: t('commands.show.flags.output'),
       char: 'o',
       helpValue: 'content|targets|name|labels|summary'
     }),
     global: Flags.boolean({
-      description: '强制使用并操作全局配置',
+      description: t('commands.show.flags.global'),
       default: false
     })
   }
@@ -131,25 +133,59 @@ export default class Show extends BaseCommand {
       index: (index + 1).toString(),
       type: template.type === 'prompt' ? '📝 Prompt' : '📦 Context',
       name: template.name,
-      summary: template.summary || '(无描述)',
+      summary: template.summary || t('common.no_description'),
       repo: (template as any).repoName || 'unknown'
     }))
     
     const table = renderTable(tableData, [
-      { header: '序号', key: 'index', width: 4 },
-      { header: '类型', key: 'type', width: 10 },
-      { header: '名称', key: 'name', width: 25 },
-      { header: '描述', key: 'summary', width: 30 },
-      { header: '仓库', key: 'repo', width: 12 }
+      { header: t('show.table.index'), key: 'index', width: 4 },
+      { header: t('show.table.type'), key: 'type', width: 10 },
+      { header: t('show.table.name'), key: 'name', width: 25 },
+      { header: t('show.table.summary'), key: 'summary', width: 30 },
+      { header: t('show.table.repo'), key: 'repo', width: 12 }
     ])
     
     logger.plain(table)
     logger.plain('')
     
-    // 简化选择逻辑：默认选择第一个
-    // 在实际实现中可以添加交互式选择
-    logger.info(`选择了第1个模板: ${templates[0].name}`)
-    return templates[0]
+    // 交互式选择
+    return this.promptUserSelection(templates)
+  }
+
+  /**
+   * 提示用户选择模板
+   */
+  private async promptUserSelection(templates: Template[]): Promise<Template> {
+    const readline = await import('node:readline')
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    })
+
+    return new Promise((resolve) => {
+      const askForSelection = () => {
+        rl.question(t('show.prompt.select', { max: templates.length }), (answer: string) => {
+          const selection = parseInt(answer.trim())
+          
+          if (isNaN(selection) || selection < 1 || selection > templates.length) {
+            logger.error(t('show.prompt.invalid', { max: templates.length }))
+            askForSelection()
+            return
+          }
+          
+          const selectedTemplate = templates[selection - 1]
+          logger.success(t('show.prompt.selected', { 
+            name: selectedTemplate.name,
+            repo: (selectedTemplate as any).repoName || 'unknown'
+          }))
+          
+          rl.close()
+          resolve(selectedTemplate)
+        })
+      }
+      
+      askForSelection()
+    })
   }
   
   /**
@@ -199,7 +235,7 @@ export default class Show extends BaseCommand {
       '类型': template.type === 'prompt' ? 'Prompt' : 'Context',
       '名称': template.name,
       '标签': template.labels.length > 0 ? template.labels.join(', ') : '(无标签)',
-      '描述': template.summary || '(无描述)'
+      '描述': template.summary || t('common.no_description')
     }
     
     logger.plain(renderKeyValue(basicInfo))
@@ -222,7 +258,7 @@ export default class Show extends BaseCommand {
    * 显示 Prompt 模板内容
    */
   private displayPromptContent(template: PromptTemplate): void {
-    logger.info('内容:')
+    logger.info(t('show.content_label'))
     logger.plain('─'.repeat(50))
     logger.plain(template.content)
     logger.plain('─'.repeat(50))
@@ -232,11 +268,11 @@ export default class Show extends BaseCommand {
    * 显示 Context 模板内容
    */
   private displayContextContent(template: ContextTemplate): void {
-    logger.info(`目标文件 (${template.targets.length} 个):`)
+    logger.info(t('show.target_files', { count: template.targets.length }))
     logger.plain('')
     
     template.targets.forEach((target, index) => {
-      logger.plain(`📄 目标 ${index + 1}: ${target.path}`)
+      logger.plain(t('show.target_file_item', { index: index + 1, path: target.path }))
       
       const details = {
         '模式': target.mode,
@@ -249,7 +285,7 @@ export default class Show extends BaseCommand {
       logger.plain(renderKeyValue(details, { indent: 2 }))
       
       if (target.content) {
-        logger.plain('  内容预览:')
+        logger.plain(`  ${t('show.content_preview')}:`)
         const preview = target.content.length > 200 
           ? target.content.substring(0, 200) + '...'
           : target.content

@@ -3,7 +3,7 @@
  */
 
 import { Flags } from '@oclif/core'
-import { BaseCommand } from './base'
+import { BaseCommand } from '../base/base'
 import { join } from 'node:path'
 import { writeYamlFile } from '../infra/yaml'
 import { fileExists } from '../infra/fs'
@@ -16,7 +16,9 @@ import { ProjectConfig, RepoConfig } from '../types/config'
 import { ConfigValidationError } from '../types/errors'
 
 export default class Init extends BaseCommand {
-  static override description = '在当前目录生成 .ac.yaml 项目配置文件'
+  static override description = t('commands.init.description')
+  
+
 
   static override examples = [
     '<%= config.bin %> <%= command.id %>',
@@ -27,19 +29,19 @@ export default class Init extends BaseCommand {
 
   static override flags = {
     repo: Flags.string({
-      description: '默认模板仓库 URL',
+      description: t('commands.init.flags.repo'),
       helpValue: 'https://github.com/astro-tpl/ac-tpl.git'
     }),
     name: Flags.string({
-      description: '仓库别名',
+      description: t('commands.init.flags.name'),
       helpValue: 'templates'
     }),
     branch: Flags.string({
-      description: '分支名',
+      description: t('commands.init.flags.branch'),
       default: DEFAULT_BRANCH
     }),
     force: Flags.boolean({
-      description: '强制覆盖已存在的配置文件',
+      description: t('commands.init.flags.force'),
       default: false
     })
   }

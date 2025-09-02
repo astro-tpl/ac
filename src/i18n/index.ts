@@ -2,8 +2,15 @@
  * 国际化模块 - 根据规格文档第422-486行实现
  */
 
-import en from './en.json'
-import zh from './zh.json'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+const en = JSON.parse(readFileSync(join(__dirname, 'en.json'), 'utf-8'))
+const zh = JSON.parse(readFileSync(join(__dirname, 'zh.json'), 'utf-8'))
 
 type Dict = Record<string, string>
 const dicts: Record<string, Dict> = { en, zh }

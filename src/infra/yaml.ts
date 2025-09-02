@@ -5,6 +5,7 @@
 import * as yaml from 'js-yaml'
 import { readFile, atomicWriteFile } from './fs'
 import { ConfigValidationError, TemplateValidationError } from '../types/errors'
+import { t } from '../i18n'
 
 /**
  * 读取并解析 YAML 文件
@@ -20,15 +21,13 @@ export async function readYamlFile<T = any>(filepath: string): Promise<T> {
     })
     
     if (parsed === null || parsed === undefined) {
-      throw new Error('YAML 文件内容为空')
+      throw new Error(t('error.file.read_failed', { path: filepath }))
     }
     
     return parsed as T
   } catch (error: any) {
     if (error.name === 'YAMLException') {
-      throw new ConfigValidationError(
-        `YAML 格式错误: ${filepath} - ${error.message}`
-      )
+      throw new ConfigValidationError(t('error.yaml.parse_failed', { error: `${filepath} - ${error.message}` }))
     }
     throw error
   }
@@ -58,9 +57,7 @@ export async function writeYamlFile(filepath: string, data: any): Promise<void> 
     
     await atomicWriteFile(filepath, yamlContent)
   } catch (error: any) {
-    throw new ConfigValidationError(
-      `写入 YAML 文件失败: ${filepath} - ${error.message}`
-    )
+    throw new ConfigValidationError(t('error.file.write_failed', { path: `${filepath} - ${error.message}` }))
   }
 }
 
@@ -75,15 +72,13 @@ export function parseYaml<T = any>(content: string): T {
     })
     
     if (parsed === null || parsed === undefined) {
-      throw new Error('YAML 内容为空')
+      throw new Error(t('error.yaml.parse_failed', { error: 'empty content' }))
     }
     
     return parsed as T
   } catch (error: any) {
     if (error.name === 'YAMLException') {
-      throw new TemplateValidationError(
-        `YAML 格式错误: ${error.message}`
-      )
+      throw new TemplateValidationError(t('error.yaml.parse_failed', { error: error.message }))
     }
     throw error
   }
@@ -144,8 +139,6 @@ export function formatYaml(content: string): string {
     const parsed = parseYaml(content)
     return stringifyYaml(parsed)
   } catch (error: any) {
-    throw new ConfigValidationError(
-      `格式化 YAML 失败: ${error.message}`
-    )
+    throw new ConfigValidationError(t('error.yaml.parse_failed', { error: error.message }))
   }
 }

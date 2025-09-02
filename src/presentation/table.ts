@@ -1,6 +1,7 @@
 /**
  * 表格输出格式化工具
  */
+import { t } from '../i18n'
 
 /**
  * 表格列定义
@@ -56,7 +57,7 @@ export class TableRenderer {
    */
   render(data: any[], columns: TableColumn[]): string {
     if (data.length === 0) {
-      return '(无数据)'
+      return t('table.no_data')
     }
     
     // 计算列宽
@@ -273,7 +274,7 @@ export function renderKeyValue(data: Record<string, any>, options: {
   
   const entries = Object.entries(data)
   if (entries.length === 0) {
-    return '(无数据)'
+    return t('table.no_data')
   }
   
   // 计算键的最大宽度
@@ -371,12 +372,12 @@ export function formatRelativeTime(date: Date): string {
   const diffDays = Math.floor(diffHours / 24)
   
   if (diffDays > 0) {
-    return `${diffDays} 天前`
+    return t('time.days_ago', { count: diffDays })
   } else if (diffHours > 0) {
-    return `${diffHours} 小时前`
+    return t('time.hours_ago', { count: diffHours })
   } else if (diffMinutes > 0) {
-    return `${diffMinutes} 分钟前`
+    return t('time.minutes_ago', { count: diffMinutes })
   } else {
-    return '刚刚'
+    return t('time.just_now')
   }
 }
