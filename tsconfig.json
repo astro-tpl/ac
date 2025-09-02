@@ -9,6 +9,7 @@
     "target": "ES2022",
     "esModuleInterop": true,
     "skipLibCheck": true,
+    "noImplicitAny": false,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
