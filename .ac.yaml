@@ -7,4 +7,4 @@ defaults:
   repo: ac-tpl
   dest: .
   mode: write
-  lang: zh
+  lang: en

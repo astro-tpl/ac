@@ -140,12 +140,16 @@ ac_project:
           search_input:
             - "实时搜索输入框，支持中文拼音模糊搜索"
             - "使用 fuzzysort 替代 ripgrep 进行模糊匹配"
-            - "防抖处理，避免过频繁的搜索触发"
+            - "无防抖处理，即时响应提高用户体验"
+            - "自定义 FilteredTextInput 组件，过滤 Ctrl 组合键"
+            - "支持多字符中文输入和拼音转换"
           
           results_display:
             - "最多显示 10 行搜索结果"
-            - "高亮当前选中项"
-            - "显示 type、id、name、repo、labels、summary 列"
+            - "单行显示，防止边框导致的渲染抖动"
+            - "使用 [prompt]/[context] 替代 emoji 标识类型"
+            - "背景色高亮选中项，替代边框高亮"
+            - "显示 type、id、name、summary、labels、repo 信息"
             - "支持实时更新搜索结果"
           
           keyboard_shortcuts:
@@ -155,7 +159,7 @@ ac_project:
               - key: "Ctrl+K / ↑" 
                 action: "向上移动光标"
               - key: "Enter"
-                action: "选择当前项并退出"
+                action: "进入详情页查看模板内容"
               - key: "Escape / Ctrl+C"
                 action: "退出搜索"
             
@@ -168,19 +172,34 @@ ac_project:
                   prompt: "提示用户输入目标文件路径（相对于配置根目录）"
                   duplicate_id: "当模板 ID 重复时，展示仓库列表让用户选择"
               
-              - key: "Ctrl+S (show)"
+              - key: "Ctrl+D (detail)"
                 action: "显示选中模板的详细内容"
-                note: "可能与终端暂停输出冲突，实现时需要检测并提供替代方案"
-                behavior: "在新的 UI 面板中展示完整的模板内容"
-                duplicate_id: "当模板 ID 重复时，展示仓库列表让用户选择"
+                note: "使用 Ctrl+D 替代 Ctrl+S，避免与终端暂停输出冲突"
+                behavior: "在新的 UI 面板中展示完整的模板内容，支持 f 键切换完整内容"
+                detail_shortcuts:
+                  - key: "f"
+                    action: "切换显示完整内容"
+                  - key: "a"
+                    action: "应用模板（简化快捷键）"
+                  - key: "y"
+                    action: "复制内容（简化快捷键）"
+                  - key: "Esc"
+                    action: "返回搜索页"
               
               - key: "Ctrl+Y (yank)"
                 action: "复制内容到系统剪切板"
-                behavior: "仅对 prompt 类型模板有效，复制其 content 字段到剪切板"
-                availability: "只在选中 prompt 类型模板时显示此快捷键提示"
+                behavior: 
+                  prompt: "复制模板的 content 字段内容"
+                  context: "复制整个模板文件的原始内容"
+                implementation: "实时从文件系统读取，不依赖缓存"
+              
+              - key: "Ctrl+U (clear)"
+                action: "清空搜索输入"
+                behavior: "清空搜索框并重置结果为所有模板"
 
       scoring:
         algorithm: "fuzzysort"
+        threshold: -10000  # 负数阈值适配 fuzzysort 评分系统
         fields_weight:
           id: 4
           name: 3
@@ -189,7 +208,14 @@ ac_project:
           content: 1  # 当启用内容搜索时
       
       lang_support:
-        chinese: "支持中文拼音模糊搜索，使用 pinyin-pro 库转换"
+        chinese: 
+          - "支持中文拼音模糊搜索，使用 pinyin-pro 库转换"
+          - "支持拼音首字母搜索（如 'bczx' 匹配 '编程中心'）"
+          - "支持拼音连写和分写（如 'biancheng' 和 'bian cheng'）"
+          - "支持中文直接搜索和拼音混合搜索"
+        implementation:
+          - "实时拼音转换，无需预处理"
+          - "多种拼音格式同时匹配提高召回率"
         fallback: "英文字符直接进行模糊匹配"
 
     - name: "show"
@@ -385,9 +411,11 @@ ac_project:
     tooling:
       node: "lts(22+)"
       package_manager: "pnpm"
+      module_system: "ESM"
       deps_runtime:
         - "@oclif/core": "CLI 框架"
-        - "ink": "React-based CLI UI"
+        - "@oclif/plugin-update": "自动更新支持"
+        - "ink": "React-based CLI UI (v4.x)"
         - "react": "UI 组件库"
         - "js-yaml": "YAML 读写"
         - "simple-git": "Git 封装"
@@ -396,6 +424,7 @@ ac_project:
         - "pinyin-pro": "中文拼音转换"
       deps_dev:
         - "typescript": "TS 编译"
+        - "tsc-alias": "路径别名解析"
         - "vitest": "单测"
         - "@types/react": "React 类型定义"
     
@@ -403,18 +432,30 @@ ac_project:
       resolution:
         - "@/* -> @/src/*"
       allowJs: false
-      module: "CommonJS"
+      module: "ESNext"
+      target: "ES2022"
+      outDir: "dist"
     
     package_json_fields:
+      type: "module"  # ESM 支持
+      exports: "./dist/index.js"
+      files: ["/dist"]
       bin:
-        ac: "bin/run"
+        ac: "bin/run.js"
       oclif:
-        commands: "dist/commands"
+        commands: "./dist/commands"
         bin: "ac"
         default: "search"  # 默认命令
+        plugins: ["@oclif/plugin-update"]
       scripts:
         - name: "build"
-          value: "tsc -b"
+          value: "tsc -b && tsc-alias"
+        - name: "clean" 
+          value: "rm -rf dist"
+        - name: "pack"
+          value: "oclif pack tarballs"
+        - name: "upload"
+          value: "oclif upload tarballs"
         - name: "typecheck"
           value: "tsc --noEmit"
         - name: "dev"
@@ -442,13 +483,16 @@ ac_project:
       │  ├─ ui/                  # ink + React UI 组件
       │  │  ├─ SearchApp.tsx     # 主搜索界面组件
       │  │  ├─ SearchInput.tsx   # 搜索输入框
+      │  │  ├─ FilteredTextInput.tsx # 自定义文本输入组件，过滤 Ctrl 键
       │  │  ├─ ResultsList.tsx   # 搜索结果列表
-      │  │  ├─ DetailView.tsx    # 模板详情展示
+      │  │  ├─ DetailView.tsx    # 模板详情展示，支持实时内容加载
       │  │  ├─ ApplyConfirm.tsx  # Apply 确认界面
+      │  │  ├─ utils/            # UI 工具函数
+      │  │  │  └─ keyboardMapping.ts # 键盘事件标准化和映射
       │  │  └─ hooks/            # 自定义 hooks
-      │  │     ├─ useSearch.ts   # 搜索逻辑
+      │  │     ├─ useSearch.ts   # 搜索逻辑，支持无防抖即时搜索
       │  │     ├─ useKeyboard.ts # 键盘事件处理
-      │  │     └─ useClipboard.ts # 剪切板操作
+      │  │     └─ useClipboard.ts # 剪切板操作，支持实时文件读取
       │  ├─ core/                # 领域逻辑（业务核心）
       │  │  ├─ config.service.ts   # 配置解析：逐级查找 .ac.yaml / 全局 ~/.ac/config.yaml
       │  │  ├─ repo.service.ts     # repo 管理逻辑（add/list/update/remove）
@@ -728,10 +772,11 @@ ac_project:
         - "End: 移动到最后一项"
       
       action_mode:
-        - "Enter: 选择当前项（默认行为，可配置）"
+        - "Enter: 进入详情页查看模板内容"
         - "Ctrl+A: Apply 模板"
-        - "Ctrl+S: Show 详情"
-        - "Ctrl+Y: Yank 内容（仅 prompt）"
+        - "Ctrl+D: Show 详情（替代 Ctrl+S 避免冲突）"
+        - "Ctrl+Y: Yank 内容（prompt/context 都支持）"
+        - "Ctrl+U: 清空搜索输入"
         - "Escape / Ctrl+C: 退出"
     
     apply_workflow:
@@ -795,3 +840,72 @@ ac_project:
       - "上下文帮助：根据当前状态显示相关帮助"
       - "快捷键提示：动态显示可用快捷键"
       - "错误指导：错误时提供解决建议"
+
+  # ------------------------------------------------------------
+  # 实际实现技术细节（基于重构成果）
+  # ------------------------------------------------------------
+  implementation_details:
+    keyboard_system:
+      architecture: "分层键盘事件处理系统"
+      components:
+        - "normalizeKeyEvent: 标准化终端键盘事件"
+        - "FilteredTextInput: 过滤 Ctrl 组合键的文本输入组件"
+        - "keyboardMapping: 控制字符到字母的映射（如 \\n -> j）"
+        - "isNavigationKey/getActionKey: 键盘事件分类和动作映射"
+      
+      challenges_solved:
+        - "终端控制字符映射（Ctrl+J = \\n）"
+        - "中文输入法多字符处理"
+        - "Ctrl 组合键与普通输入的分离"
+        - "跨平台键盘事件兼容性"
+    
+    search_engine:
+      implementation: "fuzzysort + pinyin-pro 深度集成"
+      features:
+        - "实时拼音转换：toPinyin() 动态处理中文"
+        - "多格式匹配：拼音带空格、无空格、首字母"
+        - "负数阈值：-10000 适配 fuzzysort 评分系统"
+        - "字段权重：id(4) > name(3) > labels/summary(2) > content(1)"
+      
+      performance:
+        - "无防抖设计：debounceMs = 0 提高响应性"
+        - "本地搜索：无网络依赖，纯客户端处理"
+        - "缓存策略：索引预构建，搜索结果即时计算"
+    
+    react_integration:
+      state_management:
+        - "useCallback 优化：防止无限渲染循环"
+        - "状态批处理：backToSearch/toggleFullContent 函数"
+        - "依赖数组优化：精确控制 useEffect 触发"
+      
+      component_architecture:
+        - "SearchApp: 主状态管理和路由"
+        - "FilteredTextInput: 键盘事件过滤"
+        - "DetailView: 动态内容加载（useEffect + async）"
+        - "hooks: 业务逻辑分离（useSearch, useClipboard）"
+    
+    ui_optimization:
+      rendering_performance:
+        - "单行结果显示：避免边框导致的布局抖动"
+        - "背景色选中：替代边框高亮减少重绘"
+        - "类型标识：[prompt]/[context] 替代 emoji"
+        - "状态更新批处理：减少不必要的重新渲染"
+      
+      user_experience:
+        - "即时搜索反馈：0ms 延迟"
+        - "中文输入支持：多字符输入法兼容"
+        - "简化快捷键：详情页使用单字母 a/y/f"
+        - "错误恢复：ESM 导入失败的手动修复机制"
+    
+    build_system:
+      compilation_pipeline:
+        - "TypeScript 编译：tsc -b"
+        - "oclif 打包：pack tarballs 支持自动更新"
+      
+      module_resolution:
+        - "路径别名：@/* -> src/*"
+    
+    deployment:
+      packaging: "oclif pack tarballs 生成跨平台分发包"
+      updates: "@oclif/plugin-update 支持自动更新"
+      compatibility: "Node.js 22+ LTS，跨平台支持"

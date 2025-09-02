@@ -90,6 +90,11 @@ export function SearchApp({
     setShowFullContent(false)
   }, [])
 
+  // 切换全内容显示的函数
+  const toggleFullContent = useCallback(() => {
+    setShowFullContent(prev => !prev)
+  }, [])
+
   // Initialize search
   useEffect(() => {
     if (initialQuery) {
@@ -208,7 +213,7 @@ export function SearchApp({
       case 'detail':
         // 详情页使用简化的单字母快捷键
         if (input === 'f') {
-          setShowFullContent(!showFullContent)
+          toggleFullContent()
         } else if (input === 'y' && selectedTemplate) {
           copyTemplate(selectedTemplate)
         } else if (input === 'a' && selectedTemplate) {
