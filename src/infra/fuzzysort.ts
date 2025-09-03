@@ -80,7 +80,7 @@ export class FuzzysortSearchEngine {
     } = options
 
     if (!query.trim()) {
-      return templates.map(template => ({
+      return templates.slice(0, limit).map(template => ({
         score: 1,
         template,
         matchedFields: []
