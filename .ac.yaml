@@ -3,6 +3,9 @@ repos:
   - name: ac-tpl
     git: https://github.com/astro-tpl/ac-tpl.git
     branch: main
+  - name: ac-tpl-engineer
+    git: https://github.com/astro-tpl/ac-tpl-engineer.git
+    branch: main
 defaults:
   repo: ac-tpl
   dest: .

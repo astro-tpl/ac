@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, Text } from 'ink'
 import TextInput from 'ink-text-input'
 import { IndexedTemplate } from '@/types/template'
@@ -19,6 +19,10 @@ interface ApplyConfirmProps {
   theme?: UITheme
   /** 是否正在应用 */
   isApplying?: boolean
+  /** 当前步骤变化回调 */
+  onStepChange?: (step: InputStep) => void
+  /** 暴露确认函数的回调 */
+  onExposeConfirm?: (confirmFn: () => void) => void
 }
 
 const DEFAULT_THEME = {
@@ -31,7 +35,7 @@ const DEFAULT_THEME = {
   secondary: '#666666'
 }
 
-type InputStep = 'path' | 'mode' | 'confirm'
+export type InputStep = 'path' | 'mode' | 'confirm'
 
 export function ApplyConfirm({
   template,
@@ -40,12 +44,31 @@ export function ApplyConfirm({
   onConfirm,
   onCancel,
   theme = DEFAULT_THEME,
-  isApplying = false
+  isApplying = false,
+  onStepChange,
+  onExposeConfirm
 }: ApplyConfirmProps) {
   const [currentStep, setCurrentStep] = useState<InputStep>('path')
   const [targetPath, setTargetPath] = useState(defaultPath)
   const [applyMode, setApplyMode] = useState<ApplyMode>(defaultMode)
-  const [modeInput, setModeInput] = useState('')
+  const [modeInput, setModeInput] = useState<string>(defaultMode)
+
+  // 通知步骤变化
+  useEffect(() => {
+    onStepChange?.(currentStep)
+  }, [currentStep, onStepChange])
+
+  // 暴露确认函数
+  useEffect(() => {
+    if (currentStep === 'confirm') {
+      const confirmFn = () => {
+        if (currentStep === 'confirm') {
+          onConfirm(targetPath, applyMode)
+        }
+      }
+      onExposeConfirm?.(confirmFn)
+    }
+  }, [currentStep, targetPath, applyMode, onConfirm, onExposeConfirm])
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -79,7 +102,9 @@ export function ApplyConfirm({
   }
 
   const handleModeSubmit = () => {
-    const mode = modeInput.toLowerCase() as ApplyMode
+    // 如果输入为空或与默认值相同，使用默认模式
+    const inputMode = modeInput.trim()
+    const mode = (inputMode || defaultMode).toLowerCase() as ApplyMode
     if (['write', 'append', 'merge'].includes(mode)) {
       setApplyMode(mode)
       setCurrentStep('confirm')
@@ -160,12 +185,15 @@ export function ApplyConfirm({
             <Text color={theme.primary}>Step 2: Apply Mode</Text>
           </Box>
           <Box marginBottom={1}>
-            <Text color={theme.secondary}>Choose how to handle existing files:</Text>
+            <Text color={theme.secondary}>Choose how to handle existing files (default: {defaultMode}):</Text>
           </Box>
           <Box flexDirection="column" marginBottom={1}>
             <Text color={theme.success}>• write - {getModeDescription('write')}</Text>
             <Text color={theme.success}>• append - {getModeDescription('append')}</Text>
             <Text color={theme.success}>• merge - {getModeDescription('merge')}</Text>
+          </Box>
+          <Box marginBottom={1}>
+            <Text color={theme.secondary}>Press Enter to use default ({defaultMode}) or type a mode:</Text>
           </Box>
           <Box>
             <Text color={theme.primary}>⚙️  </Text>
@@ -209,6 +237,9 @@ export function ApplyConfirm({
             </Box>
           )}
           
+          <Box marginBottom={1}>
+            <Text color={theme.secondary}>Press Enter to confirm or Esc to cancel</Text>
+          </Box>
 
         </Box>
       )}

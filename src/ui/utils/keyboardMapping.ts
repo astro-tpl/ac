@@ -81,48 +81,57 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
     isSpecial: false
   }
 
-  // 检查是否为控制字符
-  if (isControlChar(input)) {
-    result.isCtrl = true
-    result.letter = getControlCharLetter(input) || undefined
+  // 首先检查特殊键标志 - 这些优先级最高
+  if (key.upArrow) {
+    result.isSpecial = true
+    result.specialKey = 'up'
+    return result
+  } else if (key.downArrow) {
+    result.isSpecial = true
+    result.specialKey = 'down'
+    return result
+  } else if (key.leftArrow) {
+    result.isSpecial = true
+    result.specialKey = 'left'
+    return result
+  } else if (key.rightArrow) {
+    result.isSpecial = true
+    result.specialKey = 'right'
+    return result
+  } else if (key.return) {
+    result.isSpecial = true
+    result.specialKey = 'enter'
+    return result
+  } else if (key.escape) {
+    result.isSpecial = true
+    result.specialKey = 'escape'
+    return result
+  } else if (key.tab) {
+    result.isSpecial = true
+    result.specialKey = 'tab'
+    return result
+  } else if (key.backspace) {
+    result.isSpecial = true
+    result.specialKey = 'backspace'
+    return result
+  } else if (key.delete) {
+    result.isSpecial = true
+    result.specialKey = 'delete'
     return result
   }
 
-  // 检查 key 对象中的 ctrl 标志
+  // 然后检查 key 对象中的 ctrl 标志
   if (key.ctrl && input && input.length === 1) {
     result.isCtrl = true
     result.letter = input.toLowerCase()
     return result
   }
 
-  // 检查特殊键
-  if (key.upArrow) {
-    result.isSpecial = true
-    result.specialKey = 'up'
-  } else if (key.downArrow) {
-    result.isSpecial = true
-    result.specialKey = 'down'
-  } else if (key.leftArrow) {
-    result.isSpecial = true
-    result.specialKey = 'left'
-  } else if (key.rightArrow) {
-    result.isSpecial = true
-    result.specialKey = 'right'
-  } else if (key.return) {
-    result.isSpecial = true
-    result.specialKey = 'enter'
-  } else if (key.escape) {
-    result.isSpecial = true
-    result.specialKey = 'escape'
-  } else if (key.tab) {
-    result.isSpecial = true
-    result.specialKey = 'tab'
-  } else if (key.backspace) {
-    result.isSpecial = true
-    result.specialKey = 'backspace'
-  } else if (key.delete) {
-    result.isSpecial = true
-    result.specialKey = 'delete'
+  // 最后检查是否为控制字符
+  if (isControlChar(input)) {
+    result.isCtrl = true
+    result.letter = getControlCharLetter(input) || undefined
+    return result
   }
 
   return result

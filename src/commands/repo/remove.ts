@@ -29,7 +29,7 @@ export default class RepoRemove extends BaseCommand {
   static override flags = {
     'remove-local': Flags.boolean({
       description: t('commands.repo.remove.flags.remove_local'),
-      default: false
+      default: true
     }),
     global: Flags.boolean({
       description: t('commands.repo.remove.flags.global'),

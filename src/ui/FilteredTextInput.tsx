@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Text, useInput } from 'ink'
 import { normalizeKeyEvent, isControlChar } from './utils/keyboardMapping'
 
@@ -32,12 +32,40 @@ export function FilteredTextInput({
     setCursorOffset(value.length)
   }, [value])
 
+  // 删除光标前的一个单词（类似终端 Ctrl+W）
+  const deleteWordBackward = useCallback(() => {
+    if (cursorOffset === 0) return
+
+    let newOffset = cursorOffset
+    
+    // 标准的终端 Ctrl+W 行为:
+    // 1. 向前删除直到遇到空白字符或到达开头
+    while (newOffset > 0 && !/\s/.test(value[newOffset - 1])) {
+      newOffset--
+    }
+    
+    // 2. 继续删除前面的空白字符
+    while (newOffset > 0 && /\s/.test(value[newOffset - 1])) {
+      newOffset--
+    }
+    
+    const newValue = value.slice(0, newOffset) + value.slice(cursorOffset)
+    onChange(newValue)
+    setCursorOffset(newOffset)
+  }, [value, cursorOffset, onChange])
+
   useInput((input, key) => {
     if (!focus) return
 
     const normalizedKey = normalizeKeyEvent(input, key)
 
-    // 让父组件处理所有 Ctrl 组合键
+    // 处理 Ctrl+W 删除单词
+    if (normalizedKey.isCtrl && normalizedKey.letter === 'w') {
+      deleteWordBackward()
+      return
+    }
+
+    // 让父组件处理其他 Ctrl 组合键
     if (normalizedKey.isCtrl) {
       return // 让父组件处理这些键
     }

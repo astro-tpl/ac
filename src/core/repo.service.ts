@@ -5,7 +5,7 @@
 import { cloneRepository, updateRepository, getRepositoryInfo } from '../infra/git'
 import { removeDir, isDirectory } from '../infra/fs'
 import { configService } from './config.service'
-import { indexCache } from '../infra/index-cache'
+import { indexCache, rebuildTemplateIndex } from '../infra/index-cache'
 import { getRepoPath, inferRepoAlias } from '../config/paths'
 import { normalizeGitUrl, isValidGitUrl } from '../infra/git'
 import { RepoConfig, ResolvedConfig } from '../types/config'
@@ -83,9 +83,15 @@ export class RepoService {
       // 清除索引缓存，强制重建
       await indexCache.clearCache()
       
+      // 重建索引以确保缓存是最新的
+      const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
+      await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
+      logger.info(t('repo.add.index_refreshed'))
+      
       return { repo: repoConfig, isNew: !existingRepo }
     } catch (error: any) {
-      throw new GitOperationError(t('repo.add.failed'))
+      logger.error(t('repo.add.failed'), error)
+      throw new GitOperationError(`${t('repo.add.failed')}: ${error.message}`)
     }
   }
   
@@ -219,6 +225,10 @@ export class RepoService {
     // 清除索引缓存，强制重建
     await indexCache.clearCache()
     
+    // 重建索引以确保缓存是最新的
+    const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
+    await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
+    
     return { updated: results }
   }
   
@@ -264,6 +274,10 @@ export class RepoService {
       
       // 清除索引缓存
       await indexCache.clearCache()
+      
+      // 重建索引以确保缓存是最新的
+      const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
+      await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
       
       return {
         removedFromConfig,

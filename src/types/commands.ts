@@ -100,6 +100,8 @@ export interface ApplyResult {
   isNewFile: boolean
   /** 内容摘要 */
   contentSummary: string
+  /** 实际内容 */
+  content: string
   /** JSON 合并时的 key 差异 */
   jsonKeyDiff?: {
     added: string[]

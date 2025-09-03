@@ -16,6 +16,8 @@ interface ResultsListProps {
   theme?: UITheme
   /** 高亮查询关键词 */
   highlightQuery?: string
+  /** 搜索时间 */
+  searchTime?: number
 }
 
 const DEFAULT_THEME = {
@@ -34,7 +36,8 @@ export function ResultsList({
   showScore = false,
   maxDisplay = 10,
   theme = DEFAULT_THEME,
-  highlightQuery = ''
+  highlightQuery = '',
+  searchTime
 }: ResultsListProps) {
   if (results.length === 0) {
     return (
@@ -81,7 +84,7 @@ export function ResultsList({
     <Box flexDirection="column" marginTop={1}>
       <Box marginBottom={1}>
         <Text color={theme.primary}>
-          Results ({results.length}{hasMore ? `, showing ${maxDisplay}` : ''}):
+          Results ({results.length}{hasMore ? `, showing ${maxDisplay}` : ''}{searchTime !== undefined ? ` results in ${searchTime}ms` : ''}):
         </Text>
       </Box>
       

@@ -3,7 +3,7 @@ import { Box, Text, useApp, useInput } from 'ink'
 import { SearchInput } from './SearchInput'
 import { ResultsList } from './ResultsList'
 import { DetailView } from './DetailView'
-import { ApplyConfirm } from './ApplyConfirm'
+import { ApplyConfirm, InputStep } from './ApplyConfirm'
 import { useSearch } from './hooks/useSearch'
 import { useClipboard } from './hooks/useClipboard'
 import { IndexedTemplate } from '@/types/template'
@@ -51,6 +51,8 @@ export function SearchApp({
   const [showFullContent, setShowFullContent] = useState(false)
   const [isApplying, setIsApplying] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
+  const [currentApplyStep, setCurrentApplyStep] = useState<InputStep>('path')
+  const [applyConfirmFn, setApplyConfirmFn] = useState<(() => void) | null>(null)
 
   // Search hook
   const {
@@ -95,17 +97,7 @@ export function SearchApp({
     setShowFullContent(prev => !prev)
   }, [])
 
-  // Initialize search
-  useEffect(() => {
-    if (initialQuery) {
-      search(initialQuery)
-    } else {
-      // 如果没有初始查询，显示所有模板
-      search('')
-    }
-  }, [initialQuery]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Initialize filters
+  // Initialize filters first
   useEffect(() => {
     if (searchOptions.type || searchOptions.labels || searchOptions.repo) {
       setFilters({
@@ -115,6 +107,20 @@ export function SearchApp({
       })
     }
   }, [searchOptions.type, searchOptions.labels, searchOptions.repo]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Initialize search after a brief delay to allow filters to be set
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (initialQuery) {
+        search(initialQuery)
+      } else {
+        // 如果没有初始查询，显示所有模板
+        search('')
+      }
+    }, 10) // 很短的延迟确保过滤器先设置
+    
+    return () => clearTimeout(timer)
+  }, [initialQuery]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectCurrent = useCallback(() => {
     if (searchState.results.length === 0) return
@@ -161,6 +167,7 @@ export function SearchApp({
     
     // 全局快捷键处理
     const actionKey = getActionKey(normalizedKey)
+    
     if (actionKey === 'quit') {
       onExit?.()
       exit()
@@ -222,7 +229,10 @@ export function SearchApp({
         break
 
       case 'apply':
-        // Apply confirmation is handled by the ApplyConfirm component
+        if (normalizedKey.isSpecial && normalizedKey.specialKey === 'enter' && currentApplyStep === 'confirm' && applyConfirmFn) {
+          // 在确认步骤按下 enter，触发确认
+          applyConfirmFn()
+        }
         break
     }
   })
@@ -247,6 +257,7 @@ export function SearchApp({
                 showScore={false}
                 theme={theme}
                 highlightQuery={searchState.query}
+                searchTime={searchState.stats.searchTime}
               />
             )}
             
@@ -276,6 +287,8 @@ export function SearchApp({
               onCancel={() => setAppState('detail')}
               theme={theme}
               isApplying={isApplying}
+              onStepChange={setCurrentApplyStep}
+              onExposeConfirm={setApplyConfirmFn}
             />
             
             {applyError && (
@@ -293,17 +306,7 @@ export function SearchApp({
 
   return (
     <Box flexDirection="column" padding={1}>
-      {/* Header */}
-      <Box marginBottom={1}>
-        <Text color={theme.primary} bold>
-          🔍 AC Template Search
-        </Text>
-        {searchState.stats.totalResults > 0 && (
-          <Text color={theme.secondary}>
-            {' '}({searchState.stats.totalResults} results in {searchState.stats.searchTime}ms)
-          </Text>
-        )}
-      </Box>
+
 
       {/* Main content */}
       {renderContent()}

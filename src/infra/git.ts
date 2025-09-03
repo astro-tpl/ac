@@ -147,17 +147,23 @@ export async function cloneRepository(
   branch: string = 'main'
 ): Promise<GitRepository> {
   try {
-    // 确保目标目录的父目录存在
-    await ensureDir(targetPath)
-    
     // 如果目标目录已存在且是有效的 git 仓库，则直接返回
     if (await isDirectory(targetPath)) {
       const repo = new GitRepository(targetPath)
       if (await repo.isValidRepo()) {
         logger.debug(t('repo.list.status.normal'))
         return repo
+      } else {
+        // 目录存在但不是有效的git仓库，删除它
+        const fs = await import('node:fs/promises')
+        await fs.rm(targetPath, { recursive: true, force: true })
       }
     }
+    
+    // 确保目标目录的父目录存在
+    const path = await import('node:path')
+    const parentDir = path.dirname(targetPath)
+    await ensureDir(parentDir)
     
     logger.info(t('repo.add.cloning', { alias: (targetPath.split('/').pop() || targetPath), url: gitUrl }))
     
