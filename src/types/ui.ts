@@ -2,182 +2,182 @@
  * UI related type definitions
  */
 
-import { SearchResult, IndexedTemplate } from './template'
+import {IndexedTemplate, SearchResult} from './template'
 
 // Search state
 export interface SearchState {
+  /** Currently viewing detail template */
+  detailTemplate?: IndexedTemplate
+  /** Search error message */
+  error?: string
+  /** Search filters */
+  filters: {
+    labels: string[]
+    repo?: string
+    type?: 'context' | 'prompt'
+  }
+  /** Whether loading */
+  isLoading: boolean
   /** Search keywords */
   query: string
   /** Search results */
   results: SearchResult[]
   /** Currently selected result index */
   selectedIndex: number
-  /** Whether loading */
-  isLoading: boolean
-  /** Search error message */
-  error?: string
   /** Whether to show details */
   showDetail: boolean
-  /** Currently viewing detail template */
-  detailTemplate?: IndexedTemplate
-  /** Search filters */
-  filters: {
-    type?: 'prompt' | 'context'
-    labels: string[]
-    repo?: string
-  }
   /** Search statistics */
   stats: {
-    totalResults: number
-    searchTime: number
     repositories: string[]
+    searchTime: number
+    totalResults: number
   }
 }
 
 // Keyboard action types
-export type KeyboardAction = 
-  | 'move-up'
-  | 'move-down'
-  | 'select'
+export type KeyboardAction =
   | 'apply'
-  | 'show-detail'
+  | 'back'
+  | 'clear-input'
   | 'copy-to-clipboard'
   | 'exit'
-  | 'clear-input'
-  | 'back'
+  | 'move-down'
+  | 'move-up'
+  | 'select'
+  | 'show-detail'
 
 // Application modes
-export type ApplyMode = 'write' | 'append' | 'merge'
+export type ApplyMode = 'append' | 'merge' | 'write'
 
 // Application state
 export interface ApplyState {
-  /** Whether to show application confirmation interface */
-  showApplyConfirm: boolean
-  /** Template to apply */
-  templateToApply?: IndexedTemplate
-  /** Target path */
-  targetPath?: string
-  /** Application mode */
-  mode: ApplyMode
-  /** Whether currently applying */
-  isApplying: boolean
   /** Application error message */
   error?: string
+  /** Whether currently applying */
+  isApplying: boolean
+  /** Application mode */
+  mode: ApplyMode
+  /** Whether to show application confirmation interface */
+  showApplyConfirm: boolean
+  /** Target path */
+  targetPath?: string
+  /** Template to apply */
+  templateToApply?: IndexedTemplate
 }
 
 // Application result
 export interface ApplyResult {
-  /** Whether successful */
-  success: boolean
-  /** Error message */
-  error?: string
   /** List of affected files */
   affectedFiles: string[]
+  /** Error message */
+  error?: string
+  /** Whether successful */
+  success: boolean
 }
 
 // Search options
 export interface SearchOptions {
-  /** Template type filter */
-  type?: 'prompt' | 'context'
   /** Label filter */
   labels?: string[]
-  /** Repository filter */
-  repo?: string
   /** Maximum number of results */
   maxResults?: number
+  /** Repository filter */
+  repo?: string
+  /** Template type filter */
+  type?: 'context' | 'prompt'
 }
 
 // UI theme configuration
 export interface UITheme {
+  /** Error color */
+  error: string
   /** Primary color */
   primary: string
+  /** Secondary text color */
+  secondary: string
   /** Selected item background color */
   selectedBg: string
   /** Selected item foreground color */
   selectedFg: string
-  /** Error color */
-  error: string
   /** Success color */
   success: string
   /** Warning color */
   warning: string
-  /** Secondary text color */
-  secondary: string
 }
 
 // Default theme
 export const DEFAULT_THEME: UITheme = {
+  error: '#cc0000',
   primary: '#0066cc',
+  secondary: '#666666',
   selectedBg: '#0066cc',
   selectedFg: '#ffffff',
-  error: '#cc0000',
   success: '#00cc00',
   warning: '#cc6600',
-  secondary: '#666666'
 }
 
 // Key bindings configuration
 export interface KeyBindings {
-  moveUp: string
-  moveDown: string
-  select: string
   apply: string
-  copy: string
-  toggleDetail: string
-  clearSearch: string
-  help: string
-  quit: string
   back: string
+  clearSearch: string
+  copy: string
+  help: string
+  moveDown: string
+  moveUp: string
+  quit: string
+  select: string
+  toggleDetail: string
 }
 
 // Default key bindings
 export const DEFAULT_KEY_BINDINGS: KeyBindings = {
-  moveUp: 'k',
-  moveDown: 'j',
-  select: 'enter',
   apply: 'a',
-  copy: 'c',
-  toggleDetail: 'd',
+  back: 'escape',
   clearSearch: 'u',
+  copy: 'c',
   help: 'h',
+  moveDown: 'j',
+  moveUp: 'k',
   quit: 'q',
-  back: 'escape'
+  select: 'enter',
+  toggleDetail: 'd',
 }
 
 // Search configuration
 export interface SearchConfig {
   /** Debounce delay (milliseconds) */
   debounceMs: number
-  /** Maximum display results */
-  maxDisplayResults: number
   /** Whether to enable pinyin search */
   enablePinyin: boolean
-  /** Search threshold */
-  threshold: number
+  /** Maximum display results */
+  maxDisplayResults: number
   /** Maximum results */
   maxResults: number
   /** Search weight configuration */
   searchWeights: {
-    id: number
-    name: number
-    labels: number
-    summary: number
     content: number
+    id: number
+    labels: number
+    name: number
+    summary: number
   }
+  /** Search threshold */
+  threshold: number
 }
 
 // Default search configuration
 export const DEFAULT_SEARCH_CONFIG: SearchConfig = {
   debounceMs: 0,
-  maxDisplayResults: 10,
   enablePinyin: true,
-  threshold: -10000,
+  maxDisplayResults: 10,
   maxResults: 20,
   searchWeights: {
+    content: 1,
     id: 4,
-    name: 3,
     labels: 2,
+    name: 3,
     summary: 2,
-    content: 1
-  }
+  },
+  threshold: -10_000,
 }

@@ -1,15 +1,15 @@
-import { defineConfig } from 'vitest/config'
-import { resolve } from 'path'
+import {resolve} from 'node:path'
+import {defineConfig} from 'vitest/config'
 
 export default defineConfig({
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    pool: 'forks'
-  },
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src')
-    }
-  }
+      '@': resolve(__dirname, './src'),
+    },
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    pool: 'forks',
+  },
 })

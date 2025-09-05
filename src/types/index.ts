@@ -2,7 +2,7 @@
  * Type definitions entry file
  */
 
-export * from './config'
-export * from './template'
-export * from './errors'
 export * from './commands'
+export * from './config'
+export * from './errors'
+export * from './template'

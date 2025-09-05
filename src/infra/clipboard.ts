@@ -4,19 +4,20 @@
  */
 
 import clipboardy from 'clipboardy'
-import { logger } from './logger'
-import { t } from '../i18n'
+
+import {t} from '../i18n'
+import {logger} from './logger'
 
 /**
  * Clipboard operation result
  */
 export interface ClipboardResult {
-  /** Whether operation succeeded */
-  success: boolean
   /** Error message (if failed) */
   error?: string
   /** Length of copied content (if successful) */
   length?: number
+  /** Whether operation succeeded */
+  success: boolean
 }
 
 /**
@@ -24,95 +25,67 @@ export interface ClipboardResult {
  */
 export class ClipboardManager {
   /**
-   * Copy text to clipboard
-   */
-  async copyText(text: string): Promise<ClipboardResult> {
-    try {
-      if (!text) {
-        return {
-          success: false,
-          error: t('clipboard.empty_content')
-        }
-      }
-
-      await clipboardy.write(text)
-      
-      logger.debug(`Copied ${text.length} characters to clipboard`)
-      
-      return {
-        success: true,
-        length: text.length
-      }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Unknown clipboard error'
-      logger.error(t('clipboard.copy_failed'), error)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    }
-  }
-
-  /**
-   * Read text from clipboard
-   */
-  async readText(): Promise<ClipboardResult & { content?: string }> {
-    try {
-      const content = await clipboardy.read()
-      
-      logger.debug(`Read ${content.length} characters from clipboard`)
-      
-      return {
-        success: true,
-        content,
-        length: content.length
-      }
-    } catch (error: any) {
-      const errorMessage = error.message || 'Unknown clipboard error'
-      logger.error(t('clipboard.read_failed'), error)
-      
-      return {
-        success: false,
-        error: errorMessage
-      }
-    }
-  }
-
-  /**
-   * Check if clipboard is available
-   */
-  async isAvailable(): Promise<boolean> {
-    try {
-      // Try to read clipboard content to test availability
-      await clipboardy.read()
-      return true
-    } catch (error) {
-      logger.debug('Clipboard not available')
-      return false
-    }
-  }
-
-  /**
    * Clear clipboard
    */
   async clear(): Promise<ClipboardResult> {
     try {
       await clipboardy.write('')
-      
+
       logger.debug('Clipboard cleared')
-      
+
       return {
+        length: 0,
         success: true,
-        length: 0
       }
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown clipboard error'
       logger.error(t('clipboard.clear_failed'), error)
-      
+
       return {
+        error: errorMessage,
         success: false,
-        error: errorMessage
+      }
+    }
+  }
+
+  /**
+   * Copy search results summary to clipboard
+   */
+  async copySearchSummary(results: Array<{
+    score: number
+    template: {
+      id: string
+      name: string
+      repoName: string
+      type: string
+    }
+  }>): Promise<ClipboardResult> {
+    try {
+      if (results.length === 0) {
+        return {
+          error: t('clipboard.no_results_to_copy'),
+          success: false,
+        }
+      }
+
+      let summary = `# Search Results (${results.length} templates)\n\n`
+
+      for (const result of results) {
+        summary += `## ${result.template.name}\n`
+        summary += `- ID: ${result.template.id}\n`
+        summary += `- Type: ${result.template.type}\n`
+        summary += `- Repository: ${result.template.repoName}\n`
+        summary += `- Score: ${result.score.toFixed(2)}\n\n`
+      }
+
+      return await this.copyText(summary)
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown error'
+      logger.error(t('clipboard.summary_copy_failed'), error)
+
+      return {
+        error: errorMessage,
+        success: false,
       }
     }
   }
@@ -122,12 +95,12 @@ export class ClipboardManager {
    * Format content based on template type
    */
   async copyTemplateContent(template: {
-    id: string
-    type: 'prompt' | 'context'
-    name: string
-    content?: string
-    targets?: any[]
     absPath?: string
+    content?: string
+    id: string
+    name: string
+    targets?: any[]
+    type: 'context' | 'prompt'
   }): Promise<ClipboardResult> {
     try {
       let contentToCopy = ''
@@ -137,11 +110,11 @@ export class ClipboardManager {
         if (template.absPath) {
           const fs = await import('node:fs/promises')
           try {
-            const fileContent = await fs.readFile(template.absPath, 'utf-8')
-            const { safeParseYaml } = await import('./yaml')
+            const fileContent = await fs.readFile(template.absPath, 'utf8')
+            const {safeParseYaml} = await import('./yaml')
             const parsedTemplate = safeParseYaml(fileContent)
             contentToCopy = parsedTemplate?.content || ''
-          } catch (error) {
+          } catch {
             contentToCopy = ''
           }
         } else {
@@ -151,13 +124,13 @@ export class ClipboardManager {
         // For context type, read and copy entire file content
         const fs = await import('node:fs/promises')
         const path = await import('node:path')
-        
+
         // Use template's absPath property
         const filePath = template.absPath
         if (filePath) {
           try {
-            contentToCopy = await fs.readFile(filePath, 'utf-8')
-          } catch (error) {
+            contentToCopy = await fs.readFile(filePath, 'utf8')
+          } catch {
             // If reading file fails, fallback to template info
             contentToCopy = `# ${template.name}\n\nTemplate ID: ${template.id}\nType: ${template.type}\n\n`
             if (template.targets && template.targets.length > 0) {
@@ -181,8 +154,8 @@ export class ClipboardManager {
 
       if (!contentToCopy.trim()) {
         return {
+          error: t('clipboard.no_content_to_copy'),
           success: false,
-          error: t('clipboard.no_content_to_copy')
         }
       }
 
@@ -190,52 +163,80 @@ export class ClipboardManager {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error'
       logger.error(t('clipboard.template_copy_failed'), error)
-      
+
       return {
+        error: errorMessage,
         success: false,
-        error: errorMessage
       }
     }
   }
 
   /**
-   * Copy search results summary to clipboard
+   * Copy text to clipboard
    */
-  async copySearchSummary(results: Array<{
-    template: {
-      id: string
-      type: string
-      name: string
-      repoName: string
-    }
-    score: number
-  }>): Promise<ClipboardResult> {
+  async copyText(text: string): Promise<ClipboardResult> {
     try {
-      if (results.length === 0) {
+      if (!text) {
         return {
+          error: t('clipboard.empty_content'),
           success: false,
-          error: t('clipboard.no_results_to_copy')
         }
       }
 
-      let summary = `# Search Results (${results.length} templates)\n\n`
-      
-      for (const result of results) {
-        summary += `## ${result.template.name}\n`
-        summary += `- ID: ${result.template.id}\n`
-        summary += `- Type: ${result.template.type}\n`
-        summary += `- Repository: ${result.template.repoName}\n`
-        summary += `- Score: ${result.score.toFixed(2)}\n\n`
-      }
+      await clipboardy.write(text)
 
-      return await this.copyText(summary)
-    } catch (error: any) {
-      const errorMessage = error.message || 'Unknown error'
-      logger.error(t('clipboard.summary_copy_failed'), error)
-      
+      logger.debug(`Copied ${text.length} characters to clipboard`)
+
       return {
+        length: text.length,
+        success: true,
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown clipboard error'
+      logger.error(t('clipboard.copy_failed'), error)
+
+      return {
+        error: errorMessage,
         success: false,
-        error: errorMessage
+      }
+    }
+  }
+
+  /**
+   * Check if clipboard is available
+   */
+  async isAvailable(): Promise<boolean> {
+    try {
+      // Try to read clipboard content to test availability
+      await clipboardy.read()
+      return true
+    } catch {
+      logger.debug('Clipboard not available')
+      return false
+    }
+  }
+
+  /**
+   * Read text from clipboard
+   */
+  async readText(): Promise<{ content?: string } & ClipboardResult> {
+    try {
+      const content = await clipboardy.read()
+
+      logger.debug(`Read ${content.length} characters from clipboard`)
+
+      return {
+        content,
+        length: content.length,
+        success: true,
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || 'Unknown clipboard error'
+      logger.error(t('clipboard.read_failed'), error)
+
+      return {
+        error: errorMessage,
+        success: false,
       }
     }
   }
@@ -254,7 +255,7 @@ export async function copyToClipboard(text: string): Promise<ClipboardResult> {
 /**
  * Convenience function: read text from clipboard
  */
-export async function readFromClipboard(): Promise<ClipboardResult & { content?: string }> {
+export async function readFromClipboard(): Promise<{ content?: string } & ClipboardResult> {
   return clipboardManager.readText()
 }
 
@@ -269,11 +270,11 @@ export async function isClipboardAvailable(): Promise<boolean> {
  * Convenience function: copy template content
  */
 export async function copyTemplateToClipboard(template: {
-  id: string
-  type: 'prompt' | 'context'
-  name: string
   content?: string
+  id: string
+  name: string
   targets?: any[]
+  type: 'context' | 'prompt'
 }): Promise<ClipboardResult> {
   return clipboardManager.copyTemplateContent(template)
 }

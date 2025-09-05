@@ -1,6 +1,6 @@
 /**
- * 拼音搜索功能测试
- * 测试中文拼音转换和模糊匹配功能
+ * Pinyin search functionality tests
+ * Test Chinese pinyin conversion and fuzzy matching functionality
  */
 
 import {
@@ -9,17 +9,17 @@ import {
   pinyinMatchScore,
   toPinyin,
 } from '@/infra/pinyin'
-import { describe, expect, test } from 'vitest'
+import {describe, expect, test} from 'vitest'
 
-describe('拼音转换功能', () => {
+describe('Pinyin conversion functionality', () => {
   describe('toPinyin', () => {
-    test('应该正确转换中文为拼音数组', () => {
+    test('Should correctly convert Chinese to pinyin array', () => {
       expect(toPinyin('前端')).toEqual(['qian', 'duan'])
       expect(toPinyin('配置')).toEqual(['pei', 'zhi'])
       expect(toPinyin('搜索')).toEqual(['sou', 'suo'])
     })
 
-    test('应该保留英文字符和数字', () => {
+    test('Should preserve English characters and numbers', () => {
       expect(toPinyin('React前端')).toEqual(['r', 'e', 'a', 'c', 't', 'qian', 'duan'])
       expect(toPinyin('前端123')).toEqual(['qian', 'duan', '1', '2', '3'])
     })

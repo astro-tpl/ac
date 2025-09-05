@@ -2,9 +2,9 @@
  * Internationalization module - Implemented according to lines 422-486 of specification document
  */
 
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
+import {readFileSync} from 'node:fs'
+import {dirname, join} from 'node:path'
+import {fileURLToPath} from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -13,7 +13,7 @@ const en = JSON.parse(readFileSync(join(__dirname, 'en.json'), 'utf-8'))
 const zh = JSON.parse(readFileSync(join(__dirname, 'zh.json'), 'utf-8'))
 
 type Dict = Record<string, string>
-const dicts: Record<string, Dict> = { en, zh }
+const dicts: Record<string, Dict> = {en, zh}
 
 let current = 'en'
 
@@ -26,7 +26,7 @@ export function initI18n(lang?: string): void {
     current = lang
     return
   }
-  
+
   // Detect system language environment
   const sysLang = process.env.LANG || process.env.LC_ALL || process.env.LC_MESSAGES || 'en'
   const short = sysLang.split('.')[0].split('_')[0]  // e.g. "zh_CN.UTF-8" -> "zh"
@@ -46,14 +46,14 @@ export function ensureI18nInitialized(): void {
 /**
  * Translation function - Support parameter interpolation
  */
-export function t(key: string, params?: Record<string, string | number>): string {
-  const template = dicts[current][key] || dicts['en'][key] || key
-  
+export function t(key: string, params?: Record<string, number | string>): string {
+  const template = dicts[current][key] || dicts.en[key] || key
+
   if (!params) return template
-  
+
   return Object.entries(params).reduce(
-    (msg, [k, v]) => msg.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v)),
-    template
+    (msg, [k, v]) => msg.replaceAll(new RegExp(`\\{${k}\\}`, 'g'), String(v)),
+    template,
   )
 }
 
@@ -72,6 +72,7 @@ export function setLang(lang: string): boolean {
     current = lang
     return true
   }
+
   return false
 }
 

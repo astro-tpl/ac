@@ -1,80 +1,81 @@
 /**
- * Fuzzysort 搜索引擎测试
- * 测试模糊搜索、拼音搜索、权重计算等核心功能
+ * Fuzzysort search engine tests
+ * Test fuzzy search, pinyin search, weight calculation and other core functions
  */
 
-import type { IndexedTemplate } from '@/types/template'
+import type {IndexedTemplate} from '@/types/template'
+
 import {
   FuzzysortSearchEngine,
   getSearchSuggestions,
   highlightSearchResults,
   searchTemplates,
 } from '@/infra/fuzzysort'
-import { describe, expect, test } from 'vitest'
+import {describe, expect, test} from 'vitest'
 
-// 测试用的模板数据
+// Test template data
 const mockTemplates: IndexedTemplate[] = [
   {
     absPath: '/test/frontend-review.yaml',
-    content: '前端代码评审规范',
+    content: 'Frontend code review specifications',
     id: 'frontend-review-v1',
     labels: ['frontend', 'review', 'react'],
     lastModified: Date.now(),
-    name: '前端代码评审',
+    name: 'Frontend Code Review',
     repoName: 'templates',
-    summary: 'React 前端代码评审提示词',
+    summary: 'React frontend code review prompt',
     type: 'prompt',
   },
   {
     absPath: '/test/backend-api.yaml',
-    content: 'API 接口设计规范',
+    content: 'API interface design specifications',
     id: 'backend-api-v1',
     labels: ['backend', 'api', 'design'],
     lastModified: Date.now(),
-    name: '后端API设计',
+    name: 'Backend API Design',
     repoName: 'templates',
-    summary: 'RESTful API 设计最佳实践',
+    summary: 'RESTful API design best practices',
     type: 'context',
   },
   {
     absPath: '/test/vue-component.yaml',
-    content: 'Vue 组件开发规范',
+    content: 'Vue component development specifications',
     id: 'vue-component-v1',
     labels: ['frontend', 'vue', 'component'],
     lastModified: Date.now(),
-    name: 'Vue组件开发',
+    name: 'Vue Component Development',
     repoName: 'templates',
-    summary: 'Vue 组件开发最佳实践',
+    summary: 'Vue component development best practices',
     type: 'prompt',
   },
   {
     absPath: '/test/database-design.yaml',
-    content: '数据库设计规范',
+    content: 'Database design specifications',
     id: 'database-design-v1',
     labels: ['database', 'design', 'mysql'],
     lastModified: Date.now(),
-    name: '数据库设计',
+    name: 'Database Design',
     repoName: 'templates',
-    summary: 'MySQL 数据库设计规范',
+    summary: 'MySQL database design specifications',
     type: 'context',
   },
 ]
 
-describe('Fuzzysort 搜索引擎', () => {
+describe('Fuzzysort search engine', () => {
   let searchEngine: FuzzysortSearchEngine
 
-  test('搜索引擎初始化', () => {
+  test('Search engine initialization', () => {
     searchEngine = new FuzzysortSearchEngine()
     expect(searchEngine).toBeDefined()
   })
 
-  describe('基本搜索功能', () => {
+  describe('Basic search functionality', () => {
     searchEngine = new FuzzysortSearchEngine()
 
-    test('空查询应该返回所有模板', () => {
+    test('Empty query should return all templates', () => {
       const results = searchEngine.search(mockTemplates, {
-        query: '',
         limit: 10,
+        query: '',
       })
 
       expect(results).toHaveLength(4)
@@ -83,21 +84,21 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('精确匹配 ID 应该得到最高优先级', () => {
       const results = searchEngine.search(mockTemplates, {
-        query: 'frontend-review-v1',
         limit: 10,
-        threshold: -20000,
+        query: 'frontend-review-v1',
+        threshold: -20_000,
       })
 
       expect(results.length).toBeGreaterThan(0)
       const exactMatch = results.find(r => r.template.id === 'frontend-review-v1')
       expect(exactMatch).toBeDefined()
-      expect(exactMatch!.score).toBeGreaterThan(-10000) // fuzzysort 使用负数评分
+      expect(exactMatch!.score).toBeGreaterThan(-10_000) // fuzzysort 使用负数评分
     })
 
-    test('模板名称匹配', () => {
+    test('Template name matching', () => {
       const results = searchEngine.search(mockTemplates, {
-        query: '前端',
         limit: 10,
+        query: 'frontend',
       })
 
       expect(results.length).toBeGreaterThan(0)
@@ -107,8 +108,8 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('标签匹配', () => {
       const results = searchEngine.search(mockTemplates, {
-        query: 'react',
         limit: 10,
+        query: 'react',
       })
 
       expect(results.length).toBeGreaterThan(0)
@@ -118,8 +119,8 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('摘要内容匹配', () => {
       const results = searchEngine.search(mockTemplates, {
-        query: 'RESTful',
         limit: 10,
+        query: 'RESTful',
       })
 
       expect(results.length).toBeGreaterThan(0)
@@ -128,14 +129,30 @@ describe('Fuzzysort 搜索引擎', () => {
     })
   })
 
-  describe('拼音搜索功能', () => {
+  describe('Pinyin search functionality', () => {
     searchEngine = new FuzzysortSearchEngine()
 
-    test('中文拼音完整匹配', () => {
-      const results = searchEngine.search(mockTemplates, {
+    // Create test data with Chinese content for pinyin testing
+    const chineseTestTemplates: IndexedTemplate[] = [
+      {
+        ...mockTemplates[0],
+        content: '前端代码评审规范',
+        name: '前端代码评审',
+        summary: 'React 前端代码评审提示词',
+      },
+      {
+        ...mockTemplates[2],
+        content: 'Vue 组件开发规范',
+        name: 'Vue组件开发',
+        summary: 'Vue 组件开发最佳实践',
+      },
+    ]
+
+    test('Chinese pinyin full matching', () => {
+      const results = searchEngine.search(chineseTestTemplates, {
+        enablePinyin: true,
+        limit: 10,
         query: 'qianduan',
-        enablePinyin: true,
-        limit: 10,
       })
 
       expect(results.length).toBeGreaterThan(0)
@@ -143,11 +160,11 @@ describe('Fuzzysort 搜索引擎', () => {
       expect(frontendTemplate).toBeDefined()
     })
 
-    test('中文拼音首字母匹配', () => {
-      const results = searchEngine.search(mockTemplates, {
+    test('Chinese pinyin initial matching', () => {
+      const results = searchEngine.search(chineseTestTemplates, {
+        enablePinyin: true,
+        limit: 10,
         query: 'qd',
-        enablePinyin: true,
-        limit: 10,
       })
 
       expect(results.length).toBeGreaterThan(0)
@@ -155,36 +172,36 @@ describe('Fuzzysort 搜索引擎', () => {
       expect(frontendTemplate).toBeDefined()
     })
 
-    test('拼音混合搜索', () => {
-      const results = searchEngine.search(mockTemplates, {
-        query: 'vue zujian',
+    test('Mixed pinyin search', () => {
+      const results = searchEngine.search(chineseTestTemplates, {
         enablePinyin: true,
         limit: 10,
+        query: 'vue zujian',
       })
 
       expect(results.length).toBeGreaterThan(0)
-      const vueTemplate = results.find(r => r.template.id === 'vue-component-v1')
+      const vueTemplate = results.find(r => r.template.name.includes('Vue'))
       expect(vueTemplate).toBeDefined()
     })
 
-    test('禁用拼音搜索应该只匹配英文', () => {
-      const resultsWithPinyin = searchEngine.search(mockTemplates, {
-        query: 'qianduan',
+    test('Disabling pinyin search should only match English', () => {
+      const resultsWithPinyin = searchEngine.search(chineseTestTemplates, {
         enablePinyin: true,
         limit: 10,
+        query: 'qianduan',
       })
 
-      const resultsWithoutPinyin = searchEngine.search(mockTemplates, {
-        query: 'qianduan',
+      const resultsWithoutPinyin = searchEngine.search(chineseTestTemplates, {
         enablePinyin: false,
         limit: 10,
+        query: 'qianduan',
       })
 
       expect(resultsWithPinyin.length).toBeGreaterThan(resultsWithoutPinyin.length)
     })
   })
 
-  describe('搜索结果排序和权重', () => {
+  describe('Search result sorting and weighting', () => {
     searchEngine = new FuzzysortSearchEngine()
 
     test('ID 匹配应该比名称匹配权重更高', () => {
@@ -203,8 +220,8 @@ describe('Fuzzysort 搜索引擎', () => {
       ]
 
       const results = searchEngine.search(testTemplates, {
-        query: 'frontend',
         limit: 10,
+        query: 'frontend',
       })
 
       expect(results.length).toBe(2)
@@ -222,28 +239,28 @@ describe('Fuzzysort 搜索引擎', () => {
       }
 
       const results = searchEngine.search(mockTemplates, {
-        query: 'React',
-        weights: customWeights,
         limit: 10,
-        threshold: -20000,
+        query: 'React',
+        threshold: -20_000,
+        weights: customWeights,
       })
 
       expect(results.length).toBeGreaterThan(0)
       // fuzzysort 使用负数评分系统，但匹配的结果应该有有效的分数
-      expect(results.every(r => r.score > -Infinity)).toBe(true)
+      expect(results.every(r => r.score > Number.NEGATIVE_INFINITY)).toBe(true)
     })
 
     test('阈值过滤低分结果', () => {
       const highThreshold = searchEngine.search(mockTemplates, {
+        limit: 10,
         query: 'nonexistent',
         threshold: -1000,
-        limit: 10,
       })
 
       const lowThreshold = searchEngine.search(mockTemplates, {
-        query: 'nonexistent',
-        threshold: -20000,
         limit: 10,
+        query: 'nonexistent',
+        threshold: -20_000,
       })
 
       expect(highThreshold.length).toBeLessThanOrEqual(lowThreshold.length)
@@ -251,13 +268,13 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('结果数量限制', () => {
       const unlimitedResults = searchEngine.search(mockTemplates, {
-        query: '',
         limit: 100,
+        query: '',
       })
 
       const limitedResults = searchEngine.search(mockTemplates, {
-        query: '',
         limit: 2,
+        query: '',
       })
 
       expect(unlimitedResults.length).toBe(4)
@@ -271,7 +288,7 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('获取搜索建议', () => {
       const suggestions = searchEngine.getSuggestions(mockTemplates, 'front', 5)
-      
+
       expect(suggestions).toBeDefined()
       expect(Array.isArray(suggestions)).toBe(true)
       // 应该包含包含 'front' 的建议
@@ -280,13 +297,13 @@ describe('Fuzzysort 搜索引擎', () => {
 
     test('空查询不应该返回建议', () => {
       const suggestions = searchEngine.getSuggestions(mockTemplates, '', 5)
-      
+
       expect(suggestions).toEqual([])
     })
 
     test('限制建议数量', () => {
       const suggestions = searchEngine.getSuggestions(mockTemplates, 'e', 2)
-      
+
       expect(suggestions.length).toBeLessThanOrEqual(2)
     })
   })
@@ -297,9 +314,9 @@ describe('Fuzzysort 搜索引擎', () => {
     test('高亮匹配的字段', () => {
       const template = mockTemplates[0]
       const matchedFields = ['name']
-      
+
       const highlighted = searchEngine.highlightMatches(template, '前端', matchedFields)
-      
+
       expect(highlighted).toBeDefined()
       expect(highlighted.name).toBeDefined()
     })
@@ -307,18 +324,18 @@ describe('Fuzzysort 搜索引擎', () => {
     test('处理不匹配的情况', () => {
       const template = mockTemplates[0]
       const matchedFields = ['name']
-      
+
       const highlighted = searchEngine.highlightMatches(template, 'nonexistent', matchedFields)
-      
+
       expect(highlighted).toBeDefined()
       expect(highlighted.name).toBe(template.name)
     })
   })
 })
 
-describe('便捷搜索函数', () => {
-  test('searchTemplates 函数', () => {
-    const results = searchTemplates(mockTemplates, '前端', {
+describe('Utility search functions', () => {
+  test('searchTemplates function', () => {
+    const results = searchTemplates(mockTemplates, 'frontend', {
       enablePinyin: true,
       limit: 5,
     })
@@ -328,15 +345,15 @@ describe('便捷搜索函数', () => {
     expect(results.length).toBeGreaterThan(0)
   })
 
-  test('highlightSearchResults 函数', () => {
+  test('highlightSearchResults function', () => {
     const template = mockTemplates[0]
-    const highlighted = highlightSearchResults(template, '前端', ['name'])
+    const highlighted = highlightSearchResults(template, 'frontend', ['name'])
 
     expect(highlighted).toBeDefined()
     expect(highlighted.name).toBeDefined()
   })
 
-  test('getSearchSuggestions 函数', () => {
+  test('getSearchSuggestions function', () => {
     const suggestions = getSearchSuggestions(mockTemplates, 'front', 3)
 
     expect(suggestions).toBeDefined()
@@ -344,11 +361,11 @@ describe('便捷搜索函数', () => {
   })
 })
 
-describe('边界情况和错误处理', () => {
+describe('Edge cases and error handling', () => {
   const searchEngine = new FuzzysortSearchEngine()
 
   test('空模板数组', () => {
-    const results = searchEngine.search([], { query: 'test' })
+    const results = searchEngine.search([], {query: 'test'})
     expect(results).toEqual([])
   })
 

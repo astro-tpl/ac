@@ -1,9 +1,9 @@
 /**
  * Keyboard mapping utility - Handle control character mapping issues in terminal
- * 
+ *
  * In terminal, certain Ctrl key combinations are mapped to specific control characters:
  * - Ctrl+J = LF (line feed, \n, character code 10)
- * - Ctrl+K = VT (vertical tab, \v, character code 11) 
+ * - Ctrl+K = VT (vertical tab, \v, character code 11)
  * - Ctrl+C = ETX (interrupt, character code 3)
  * - Ctrl+D = EOT (end of transmission, character code 4)
  * - etc...
@@ -51,7 +51,7 @@ export function isControlChar(input: string): boolean {
 /**
  * Convert control character to corresponding letter
  */
-export function getControlCharLetter(input: string): string | null {
+export function getControlCharLetter(input: string): null | string {
   if (!isControlChar(input)) return null
   const charCode = input.charCodeAt(0)
   return CONTROL_CHAR_MAP[charCode] || null
@@ -66,10 +66,10 @@ export interface NormalizedKeyEvent {
   input: string
   /** Whether it's a Ctrl combination key */
   isCtrl: boolean
-  /** Corresponding letter (if it's a Ctrl combination key) */
-  letter?: string
   /** Whether it's a special key */
   isSpecial: boolean
+  /** Corresponding letter (if it's a Ctrl combination key) */
+  letter?: string
   /** Special key name */
   specialKey?: string
 }
@@ -78,7 +78,7 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
   const result: NormalizedKeyEvent = {
     input,
     isCtrl: false,
-    isSpecial: false
+    isSpecial: false,
   }
 
   // First check special key flags - these have highest priority
@@ -86,35 +86,51 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
     result.isSpecial = true
     result.specialKey = 'up'
     return result
-  } else if (key.downArrow) {
+  }
+
+  if (key.downArrow) {
     result.isSpecial = true
     result.specialKey = 'down'
     return result
-  } else if (key.leftArrow) {
+  }
+
+  if (key.leftArrow) {
     result.isSpecial = true
     result.specialKey = 'left'
     return result
-  } else if (key.rightArrow) {
+  }
+
+  if (key.rightArrow) {
     result.isSpecial = true
     result.specialKey = 'right'
     return result
-  } else if (key.return) {
+  }
+
+  if (key.return) {
     result.isSpecial = true
     result.specialKey = 'enter'
     return result
-  } else if (key.escape) {
+  }
+
+  if (key.escape) {
     result.isSpecial = true
     result.specialKey = 'escape'
     return result
-  } else if (key.tab) {
+  }
+
+  if (key.tab) {
     result.isSpecial = true
     result.specialKey = 'tab'
     return result
-  } else if (key.backspace) {
+  }
+
+  if (key.backspace) {
     result.isSpecial = true
     result.specialKey = 'backspace'
     return result
-  } else if (key.delete) {
+  }
+
+  if (key.delete) {
     result.isSpecial = true
     result.specialKey = 'delete'
     return result
@@ -140,40 +156,53 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
 /**
  * Check if it's a navigation key
  */
-export function isNavigationKey(normalizedEvent: NormalizedKeyEvent): 'up' | 'down' | null {
+export function isNavigationKey(normalizedEvent: NormalizedKeyEvent): 'down' | 'up' | null {
   if (normalizedEvent.isSpecial) {
     if (normalizedEvent.specialKey === 'up') return 'up'
     if (normalizedEvent.specialKey === 'down') return 'down'
   }
-  
+
   if (normalizedEvent.isCtrl) {
     if (normalizedEvent.letter === 'k') return 'up'
     if (normalizedEvent.letter === 'j') return 'down'
   }
-  
+
   return null
 }
 
 /**
  * Check if it's an action key
  */
-export function getActionKey(normalizedEvent: NormalizedKeyEvent): string | null {
+export function getActionKey(normalizedEvent: NormalizedKeyEvent): null | string {
   if (normalizedEvent.isSpecial) {
     if (normalizedEvent.specialKey === 'enter') return 'select'
     if (normalizedEvent.specialKey === 'escape') return 'back'
   }
-  
+
   if (normalizedEvent.isCtrl) {
     switch (normalizedEvent.letter) {
-      case 'c': return 'quit'
-      case 'd': return 'detail'
-      case 'a': return 'apply'
-      case 'y': return 'copy'
-      case 'u': return 'clear'
-      case 'h': return 'help'
-      default: return null
+    case 'c': { return 'quit'
+    }
+
+    case 'd': { return 'detail'
+    }
+
+    case 'a': { return 'apply'
+    }
+
+    case 'y': { return 'copy'
+    }
+
+    case 'u': { return 'clear'
+    }
+
+    case 'h': { return 'help'
+    }
+
+    default: { return null
+    }
     }
   }
-  
+
   return null
 }

@@ -2,22 +2,115 @@
  * Git operations wrapper
  */
 
-import { simpleGit, SimpleGit, CleanOptions } from 'simple-git'
-import { ensureDir, fileExists, isDirectory } from './fs'
-import { GitOperationError } from '../types/errors'
-import { logger } from './logger'
-import { t } from '../i18n'
+import {CleanOptions, SimpleGit, simpleGit} from 'simple-git'
+
+import {t} from '../i18n'
+import {GitOperationError} from '../types/errors'
+import {ensureDir, fileExists, isDirectory} from './fs'
+import {logger} from './logger'
 
 /**
  * Git repository operations class
  */
 export class GitRepository {
   private git: SimpleGit
-  
+
   constructor(private repoPath: string) {
     this.git = simpleGit(repoPath)
   }
-  
+
+  /**
+   * Switch to specified branch
+   */
+  async checkout(branch: string): Promise<void> {
+    try {
+      logger.debug(`${branch}`)
+      await this.git.checkout(branch)
+    } catch (error: any) {
+      throw new GitOperationError(
+        t('error.git.pull_failed', {error: `${this.repoPath} - ${error.message}`}),
+      )
+    }
+  }
+
+  /**
+   * Get current branch name
+   */
+  async getCurrentBranch(): Promise<string> {
+    try {
+      const status = await this.git.status()
+      return status.current || 'main'
+    } catch (error: any) {
+      throw new GitOperationError(
+        t('error.git.get_branch_failed', {error: error.message, path: this.repoPath}),
+      )
+    }
+  }
+
+  /**
+   * Get latest commit information
+   */
+  async getLastCommit(): Promise<{
+    author: string
+    date: Date
+    hash: string
+    message: string
+  }> {
+    try {
+      const log = await this.git.log(['-1'])
+      const {latest} = log
+
+      if (!latest) {
+        throw new Error(t('repo.list.status.not_exists'))
+      }
+
+      return {
+        author: latest.author_name,
+        date: new Date(latest.date),
+        hash: latest.hash,
+        message: latest.message,
+      }
+    } catch (error: any) {
+      throw new GitOperationError(
+        t('error.git.pull_failed', {error: `${this.repoPath} - ${error.message}`}),
+      )
+    }
+  }
+
+  /**
+   * Get remote URL
+   */
+  async getRemoteUrl(): Promise<string> {
+    try {
+      const remotes = await this.git.getRemotes(true)
+      const origin = remotes.find(remote => remote.name === 'origin')
+
+      if (!origin?.refs?.fetch) {
+        throw new Error(t('repo.list.status.not_exists'))
+      }
+
+      return origin.refs.fetch
+    } catch (error: any) {
+      throw new GitOperationError(
+        t('error.git.pull_failed', {error: `${this.repoPath} - ${error.message}`}),
+      )
+    }
+  }
+
+  /**
+   * Check if there are uncommitted changes
+   */
+  async hasUncommittedChanges(): Promise<boolean> {
+    try {
+      const status = await this.git.status()
+      return status.files.length > 0
+    } catch (error: any) {
+      throw new GitOperationError(
+        t('error.git.check_status_failed', {error: error.message, path: this.repoPath}),
+      )
+    }
+  }
+
   /**
    * Check if it's a valid Git repository
    */
@@ -29,21 +122,7 @@ export class GitRepository {
       return false
     }
   }
-  
-  /**
-   * Get current branch name
-   */
-  async getCurrentBranch(): Promise<string> {
-    try {
-      const status = await this.git.status()
-      return status.current || 'main'
-    } catch (error: any) {
-      throw new GitOperationError(
-        t('error.git.get_branch_failed', { path: this.repoPath, error: error.message })
-      )
-    }
-  }
-  
+
   /**
    * Pull latest code
    */
@@ -54,85 +133,7 @@ export class GitRepository {
       logger.debug(t('common.done'))
     } catch (error: any) {
       throw new GitOperationError(
-        t('error.git.pull_failed', { error: `${this.repoPath} - ${error.message}` })
-      )
-    }
-  }
-  
-  /**
-   * Get latest commit information
-   */
-  async getLastCommit(): Promise<{
-    hash: string
-    date: Date
-    message: string
-    author: string
-  }> {
-    try {
-      const log = await this.git.log(['-1'])
-      const latest = log.latest
-      
-      if (!latest) {
-        throw new Error(t('repo.list.status.not_exists'))
-      }
-      
-      return {
-        hash: latest.hash,
-        date: new Date(latest.date),
-        message: latest.message,
-        author: latest.author_name
-      }
-    } catch (error: any) {
-      throw new GitOperationError(
-        t('error.git.pull_failed', { error: `${this.repoPath} - ${error.message}` })
-      )
-    }
-  }
-  
-  /**
-   * Check if there are uncommitted changes
-   */
-  async hasUncommittedChanges(): Promise<boolean> {
-    try {
-      const status = await this.git.status()
-      return status.files.length > 0
-    } catch (error: any) {
-      throw new GitOperationError(
-        t('error.git.check_status_failed', { path: this.repoPath, error: error.message })
-      )
-    }
-  }
-  
-  /**
-   * Switch to specified branch
-   */
-  async checkout(branch: string): Promise<void> {
-    try {
-      logger.debug(`${branch}`)
-      await this.git.checkout(branch)
-    } catch (error: any) {
-      throw new GitOperationError(
-        t('error.git.pull_failed', { error: `${this.repoPath} - ${error.message}` })
-      )
-    }
-  }
-  
-  /**
-   * Get remote URL
-   */
-  async getRemoteUrl(): Promise<string> {
-    try {
-      const remotes = await this.git.getRemotes(true)
-      const origin = remotes.find(remote => remote.name === 'origin')
-      
-      if (!origin?.refs?.fetch) {
-        throw new Error(t('repo.list.status.not_exists'))
-      }
-      
-      return origin.refs.fetch
-    } catch (error: any) {
-      throw new GitOperationError(
-        t('error.git.pull_failed', { error: `${this.repoPath} - ${error.message}` })
+        t('error.git.pull_failed', {error: `${this.repoPath} - ${error.message}`}),
       )
     }
   }
@@ -142,9 +143,9 @@ export class GitRepository {
  * Clone Git repository
  */
 export async function cloneRepository(
-  gitUrl: string, 
-  targetPath: string, 
-  branch: string = 'main'
+  gitUrl: string,
+  targetPath: string,
+  branch: string = 'main',
 ): Promise<GitRepository> {
   try {
     // If target directory exists and is a valid git repository, return directly
@@ -153,28 +154,28 @@ export async function cloneRepository(
       if (await repo.isValidRepo()) {
         logger.debug(t('repo.list.status.normal'))
         return repo
-      } else {
-        // Directory exists but is not a valid git repository, delete it
-        const fs = await import('node:fs/promises')
-        await fs.rm(targetPath, { recursive: true, force: true })
       }
+
+      // Directory exists but is not a valid git repository, delete it
+      const fs = await import('node:fs/promises')
+      await fs.rm(targetPath, {force: true, recursive: true})
     }
-    
+
     // Ensure parent directory of target directory exists
     const path = await import('node:path')
     const parentDir = path.dirname(targetPath)
     await ensureDir(parentDir)
-    
-    logger.info(t('repo.add.cloning', { alias: (targetPath.split('/').pop() || targetPath), url: gitUrl }))
-    
+
+    logger.info(t('repo.add.cloning', {alias: (targetPath.split('/').pop() || targetPath), url: gitUrl}))
+
     const git = simpleGit()
     await git.clone(gitUrl, targetPath, ['--branch', branch, '--single-branch'])
-    
+
     logger.success(t('common.done'))
-    
+
     return new GitRepository(targetPath)
   } catch (error: any) {
-    throw new GitOperationError(t('error.git.clone_failed', { error: `${gitUrl} -> ${targetPath} - ${error.message}` }))
+    throw new GitOperationError(t('error.git.clone_failed', {error: `${gitUrl} -> ${targetPath} - ${error.message}`}))
   }
 }
 
@@ -182,25 +183,25 @@ export async function cloneRepository(
  * Update existing repository
  */
 export async function updateRepository(
-  repoPath: string, 
-  branch: string = 'main'
+  repoPath: string,
+  branch: string = 'main',
 ): Promise<void> {
   if (!await isDirectory(repoPath)) {
     throw new GitOperationError(t('repo.list.status.not_exists'))
   }
-  
+
   const repo = new GitRepository(repoPath)
-  
+
   if (!await repo.isValidRepo()) {
     throw new GitOperationError(t('repo.list.status.invalid'))
   }
-  
+
   // Switch to specified branch (if not current branch)
   const currentBranch = await repo.getCurrentBranch()
   if (currentBranch !== branch) {
     await repo.checkout(branch)
   }
-  
+
   // Pull latest code
   await repo.pull(branch)
 }
@@ -209,44 +210,44 @@ export async function updateRepository(
  * Get repository information
  */
 export async function getRepositoryInfo(repoPath: string): Promise<{
-  isValid: boolean
   currentBranch?: string
+  hasUncommittedChanges?: boolean
+  isValid: boolean
   lastCommit?: {
-    hash: string
-    date: Date
-    message: string
     author: string
+    date: Date
+    hash: string
+    message: string
   }
   remoteUrl?: string
-  hasUncommittedChanges?: boolean
 }> {
   if (!await isDirectory(repoPath)) {
-    return { isValid: false }
+    return {isValid: false}
   }
-  
+
   const repo = new GitRepository(repoPath)
-  
+
   if (!await repo.isValidRepo()) {
-    return { isValid: false }
+    return {isValid: false}
   }
-  
+
   try {
     const [currentBranch, lastCommit, remoteUrl, hasUncommittedChanges] = await Promise.all([
       repo.getCurrentBranch(),
       repo.getLastCommit(),
       repo.getRemoteUrl(),
-      repo.hasUncommittedChanges()
+      repo.hasUncommittedChanges(),
     ])
-    
+
     return {
-      isValid: true,
       currentBranch,
+      hasUncommittedChanges,
+      isValid: true,
       lastCommit,
       remoteUrl,
-      hasUncommittedChanges
     }
   } catch (error: any) {
-    throw new GitOperationError(t('error.git.pull_failed', { error: `${repoPath} - ${error.message}` }))
+    throw new GitOperationError(t('error.git.pull_failed', {error: `${repoPath} - ${error.message}`}))
   }
 }
 
@@ -258,7 +259,7 @@ export function isValidGitUrl(url: string): boolean {
   const httpsPattern = /^https:\/\/[^/]+\/[^/]+\/[^/]+\.git$/i
   const sshPattern = /^git@[^:]+:[^/]+\/[^/]+\.git$/i
   const githubShortPattern = /^[^/]+\/[^/]+$/  // user/repo format
-  
+
   return httpsPattern.test(url) || sshPattern.test(url) || githubShortPattern.test(url)
 }
 
@@ -270,11 +271,11 @@ export function normalizeGitUrl(url: string): string {
   if (/^[^/]+\/[^/]+$/.test(url)) {
     return `https://github.com/${url}.git`
   }
-  
+
   // Ensure it ends with .git
   if (!url.endsWith('.git')) {
     return `${url}.git`
   }
-  
+
   return url
 }

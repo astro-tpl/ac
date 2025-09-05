@@ -2,8 +2,9 @@
  * Repo command group entry point
  */
 
-import { Command } from '@oclif/core'
-import { t } from '../../i18n'
+import {Command} from '@oclif/core'
+
+import {t} from '../../i18n'
 
 export default class Repo extends Command {
   static override description = t('commands.repo.description')
@@ -12,7 +13,7 @@ export default class Repo extends Command {
     '<%= config.bin %> <%= command.id %> list',
     '<%= config.bin %> <%= command.id %> add https://github.com/astro-tpl/ac-tpl.git',
     '<%= config.bin %> <%= command.id %> update',
-    '<%= config.bin %> <%= command.id %> remove template-repo'
+    '<%= config.bin %> <%= command.id %> remove template-repo',
   ]
 
   public async run(): Promise<void> {

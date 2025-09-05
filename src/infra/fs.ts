@@ -2,25 +2,26 @@
  * File system operation utility
  */
 
-import { promises as fs } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { FILE_ENCODING, TEMP_FILE_SUFFIX } from '../config/constants'
-import { FileOperationError } from '../types/errors'
-import { t } from '../i18n'
+import {promises as fs} from 'node:fs'
+import {dirname, join} from 'node:path'
+
+import {FILE_ENCODING, TEMP_FILE_SUFFIX} from '../config/constants'
+import {t} from '../i18n'
+import {FileOperationError} from '../types/errors'
 
 /**
  * Atomic write file (write temp file first, then rename)
  */
 export async function atomicWriteFile(filepath: string, content: string): Promise<void> {
   const tempPath = filepath + TEMP_FILE_SUFFIX
-  
+
   try {
     // Ensure directory exists
     await ensureDir(dirname(filepath))
-    
+
     // Write temp file
     await fs.writeFile(tempPath, content, FILE_ENCODING)
-    
+
     // Atomic rename
     await fs.rename(tempPath, filepath)
   } catch (error: any) {
@@ -30,9 +31,9 @@ export async function atomicWriteFile(filepath: string, content: string): Promis
     } catch {
       // Ignore cleanup errors
     }
-    
+
     throw new FileOperationError(
-      t('fs.error.write_failed', { file: filepath, error: error.message })
+      t('fs.error.write_failed', {error: error.message, file: filepath}),
     )
   }
 }
@@ -45,7 +46,7 @@ export async function readFile(filepath: string): Promise<string> {
     return await fs.readFile(filepath, FILE_ENCODING)
   } catch (error: any) {
     throw new FileOperationError(
-      t('fs.error.read_failed', { file: filepath, error: error.message })
+      t('fs.error.read_failed', {error: error.message, file: filepath}),
     )
   }
 }
@@ -55,11 +56,11 @@ export async function readFile(filepath: string): Promise<string> {
  */
 export async function ensureDir(dirPath: string): Promise<void> {
   try {
-    await fs.mkdir(dirPath, { recursive: true })
+    await fs.mkdir(dirPath, {recursive: true})
   } catch (error: any) {
     if (error.code !== 'EEXIST') {
       throw new FileOperationError(
-        t('fs.error.create_dir_failed', { dir: dirPath, error: error.message })
+        t('fs.error.create_dir_failed', {dir: dirPath, error: error.message}),
       )
     }
   }
@@ -105,18 +106,18 @@ export async function isFile(path: string): Promise<boolean> {
  * Get file status information
  */
 export async function getFileStats(filepath: string): Promise<{
-  size: number
-  mtime: Date
-  isFile: boolean
   isDirectory: boolean
+  isFile: boolean
+  mtime: Date
+  size: number
 } | null> {
   try {
     const stats = await fs.stat(filepath)
     return {
-      size: stats.size,
-      mtime: stats.mtime,
+      isDirectory: stats.isDirectory(),
       isFile: stats.isFile(),
-      isDirectory: stats.isDirectory()
+      mtime: stats.mtime,
+      size: stats.size,
     }
   } catch {
     return null
@@ -127,44 +128,42 @@ export async function getFileStats(filepath: string): Promise<{
  * Recursively scan files in directory
  */
 export async function scanDirectory(
-  dirPath: string, 
+  dirPath: string,
   options: {
     extensions?: string[]
-    recursive?: boolean
     includeHidden?: boolean
-  } = {}
+    recursive?: boolean
+  } = {},
 ): Promise<string[]> {
-  const { extensions, recursive = true, includeHidden = false } = options
+  const {extensions, includeHidden = false, recursive = true} = options
   const results: string[] = []
-  
+
   try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true })
-    
+    const entries = await fs.readdir(dirPath, {withFileTypes: true})
+
     for (const entry of entries) {
       const fullPath = join(dirPath, entry.name)
-      
+
       // Skip hidden files (unless explicitly included)
       if (!includeHidden && entry.name.startsWith('.')) {
         continue
       }
-      
+
       if (entry.isDirectory()) {
         if (recursive) {
           const subResults = await scanDirectory(fullPath, options)
           results.push(...subResults)
         }
-      } else if (entry.isFile()) {
-        // Check file extension
-        if (!extensions || extensions.some(ext => entry.name.endsWith(ext))) {
-          results.push(fullPath)
-        }
+      } else if (entry.isFile() // Check file extension
+        && (!extensions || extensions.some(ext => entry.name.endsWith(ext)))) {
+        results.push(fullPath)
       }
     }
-    
+
     return results.sort()
   } catch (error: any) {
     throw new FileOperationError(
-      t('fs.error.scan_dir_failed', { dir: dirPath, error: error.message })
+      t('fs.error.scan_dir_failed', {dir: dirPath, error: error.message}),
     )
   }
 }
@@ -178,7 +177,7 @@ export async function removeFile(filepath: string): Promise<void> {
   } catch (error: any) {
     if (error.code !== 'ENOENT') {
       throw new FileOperationError(
-        t('fs.error.delete_file_failed', { file: filepath, error: error.message })
+        t('fs.error.delete_file_failed', {error: error.message, file: filepath}),
       )
     }
   }
@@ -189,10 +188,10 @@ export async function removeFile(filepath: string): Promise<void> {
  */
 export async function removeDir(dirPath: string): Promise<void> {
   try {
-    await fs.rm(dirPath, { recursive: true, force: true })
+    await fs.rm(dirPath, {force: true, recursive: true})
   } catch (error: any) {
     throw new FileOperationError(
-      t('fs.error.delete_dir_failed', { dir: dirPath, error: error.message })
+      t('fs.error.delete_dir_failed', {dir: dirPath, error: error.message}),
     )
   }
 }
@@ -206,7 +205,7 @@ export async function copyFile(src: string, dest: string): Promise<void> {
     await fs.copyFile(src, dest)
   } catch (error: any) {
     throw new FileOperationError(
-      t('fs.error.copy_file_failed', { src, dest, error: error.message })
+      t('fs.error.copy_file_failed', {dest, error: error.message, src}),
     )
   }
 }

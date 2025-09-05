@@ -10,10 +10,10 @@ export interface GlobalFlags {
 
 // Repo command related
 export interface RepoAddFlags extends GlobalFlags {
-  /** Repository alias */
-  name?: string
   /** Branch name */
   branch?: string
+  /** Repository alias */
+  name?: string
 }
 
 export interface RepoUpdateArgs {
@@ -28,36 +28,36 @@ export interface RepoRemoveArgs {
 
 // Init command related
 export interface InitFlags {
-  /** Default repository URL */
-  repo?: string
-  /** Repository alias */
-  name?: string
   /** Branch name */
   branch?: string
   /** Force overwrite */
   force?: boolean
+  /** Repository alias */
+  name?: string
+  /** Default repository URL */
+  repo?: string
 }
 
 // Apply command related
 export interface ApplyFlags extends GlobalFlags {
-  /** Context template ID */
-  context?: string
-  /** Prompt template ID */
-  prompt?: string
   /** Local file content */
   content?: string
-  /** Read from standard input */
-  stdin?: boolean
+  /** Context template ID */
+  context?: string
   /** Target directory or file */
   dest?: string
+  /** Preview mode */
+  'dry-run'?: boolean
   /** Filename (when dest is a directory) */
   filename?: string
   /** Write mode */
-  mode?: 'write' | 'append' | 'merge'
+  mode?: 'append' | 'merge' | 'write'
+  /** Prompt template ID */
+  prompt?: string
   /** Repository alias */
   repo?: string
-  /** Preview mode */
-  'dry-run'?: boolean
+  /** Read from standard input */
+  stdin?: boolean
 }
 
 // Search command related
@@ -67,14 +67,14 @@ export interface SearchArgs {
 }
 
 export interface SearchFlags extends GlobalFlags {
-  /** Template type filter */
-  type?: 'context' | 'prompt'
-  /** Label filter */
-  label?: string[]
   /** Deep search (requires ripgrep) */
   deep?: boolean
+  /** Label filter */
+  label?: string[]
   /** Repository alias */
   repo?: string
+  /** Template type filter */
+  type?: 'context' | 'prompt'
 }
 
 // Show command related
@@ -84,29 +84,29 @@ export interface ShowArgs {
 }
 
 export interface ShowFlags extends GlobalFlags {
-  /** Repository alias */
-  repo?: string
   /** Output specified property path */
   output?: string
+  /** Repository alias */
+  repo?: string
 }
 
 // Application result
 export interface ApplyResult {
-  /** Target file path */
-  targetPath: string
-  /** Write mode */
-  mode: 'write' | 'append' | 'merge'
-  /** Whether it's a new file */
-  isNewFile: boolean
-  /** Content summary */
-  contentSummary: string
   /** Actual content */
   content: string
+  /** Content summary */
+  contentSummary: string
+  /** Whether it's a new file */
+  isNewFile: boolean
   /** Key differences during JSON merge */
   jsonKeyDiff?: {
     added: string[]
     modified: string[]
   }
+  /** Write mode */
+  mode: 'append' | 'merge' | 'write'
+  /** Target file path */
+  targetPath: string
 }
 
 // Preview result

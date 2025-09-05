@@ -2,8 +2,8 @@
  * Application constants definition
  */
 
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import {homedir} from 'node:os'
+import {join} from 'node:path'
 
 // Application information
 export const APP_NAME = 'ac'
@@ -26,20 +26,20 @@ export const DEFAULT_BRANCH = 'main'
 
 // Search weight configuration
 export const SEARCH_WEIGHTS = {
-  HEAD_FIELDS: 3,  // Weight for id/name/labels/summary fields
   CONTENT: 1,      // Weight for content
+  HEAD_FIELDS: 3,  // Weight for id/name/labels/summary fields
 } as const
 
 // Default configuration values
 export const DEFAULT_CONFIG = {
-  version: CURRENT_CONFIG_VERSION,
-  repos: [],
   defaults: {
-    repo: '',
     dest: '.',
-    mode: 'write' as const,
     lang: 'zh',
+    mode: 'write' as const,
+    repo: '',
   },
+  repos: [],
+  version: CURRENT_CONFIG_VERSION,
 } as const
 
 // File operation constants

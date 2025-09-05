@@ -9,18 +9,18 @@
  * @param delay Delay time (milliseconds)
  * @returns Debounced function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends(...args: any[]) => any>(
   func: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timeoutId: NodeJS.Timeout | null = null
-  
+
   return (...args: Parameters<T>) => {
     // Clear previous timer
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
-    
+
     // Set new timer
     timeoutId = setTimeout(() => {
       func.apply(null, args)
@@ -35,42 +35,42 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param delay Delay time (milliseconds)
  * @returns Object containing debounced function and cancel function
  */
-export function createDebouncedFunction<T extends (...args: any[]) => any>(
+export function createDebouncedFunction<T extends(...args: any[]) => any>(
   func: T,
-  delay: number
+  delay: number,
 ): {
-  debouncedFunc: (...args: Parameters<T>) => void
   cancel: () => void
+  debouncedFunc: (...args: Parameters<T>) => void
   flush: (...args: Parameters<T>) => void
 } {
   let timeoutId: NodeJS.Timeout | null = null
-  
+
   const debouncedFunc = (...args: Parameters<T>) => {
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
-    
+
     timeoutId = setTimeout(() => {
       func.apply(null, args)
       timeoutId = null
     }, delay)
   }
-  
+
   const cancel = () => {
     if (timeoutId) {
       clearTimeout(timeoutId)
       timeoutId = null
     }
   }
-  
+
   const flush = (...args: Parameters<T>) => {
     cancel()
     func.apply(null, args)
   }
-  
+
   return {
-    debouncedFunc,
     cancel,
-    flush
+    debouncedFunc,
+    flush,
   }
 }

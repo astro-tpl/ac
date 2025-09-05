@@ -1,14 +1,17 @@
 /**
- * 搜索服务测试
- * 测试整个搜索服务的集成功能，包括配置解析、仓库管理、索引构建和搜索等
+ * Search service tests
+ * Test the integrated functionality of the entire search service, including configuration parsing, repository management, index building and searching
  */
 
-import type { IndexedTemplate, SearchResult } from '@/types/template'
-import type { RepoConfig } from '@/types/config'
-import { SearchService } from '@/core/search.service'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import type {RepoConfig} from '@/types/config'
+import type {IndexedTemplate, SearchResult} from '@/types/template'
 
-// Mock 依赖模块
+import {SearchService} from '@/core/search.service'
+import {
+  beforeEach, describe, expect, test, vi,
+} from 'vitest'
+
+// Mock dependency modules
 vi.mock('@/core/config.service', () => ({
   configService: {
     resolveConfig: vi.fn(),
@@ -32,43 +35,43 @@ vi.mock('@/infra/fuzzysort', () => ({
   searchTemplates: vi.fn(),
 }))
 
-import { configService } from '@/core/config.service'
-import { searchTemplates as fuzzysortSearch } from '@/infra/fuzzysort'
-import { getTemplateIndex } from '@/infra/index-cache'
+import {configService} from '@/core/config.service'
+import {searchTemplates as fuzzysortSearch} from '@/infra/fuzzysort'
+import {getTemplateIndex} from '@/infra/index-cache'
 
-// 测试用的模板索引数据
+// Test template index data
 const mockIndexedTemplates: IndexedTemplate[] = [
   {
     absPath: '/test/templates/frontend-review.yaml',
-    content: '前端代码评审规范',
+    content: 'Frontend code review specifications',
     id: 'frontend-review-v1',
     labels: ['frontend', 'review', 'react'],
     lastModified: Date.now(),
-    name: '前端代码评审',
+    name: 'Frontend Code Review',
     repoName: 'templates',
-    summary: 'React 前端代码评审提示词',
+    summary: 'React frontend code review prompt',
     type: 'prompt',
   },
   {
     absPath: '/test/templates/backend-api.yaml',
-    content: 'API 接口设计规范',
+    content: 'API interface design specifications',
     id: 'backend-api-v1',
     labels: ['backend', 'api', 'design'],
     lastModified: Date.now(),
-    name: '后端API设计',
+    name: 'Backend API Design',
     repoName: 'templates',
-    summary: 'RESTful API 设计最佳实践',
+    summary: 'RESTful API design best practices',
     type: 'context',
   },
   {
     absPath: '/test/templates/vue-component.yaml',
-    content: 'Vue 组件开发规范',
+    content: 'Vue component development specifications',
     id: 'vue-component-v1',
     labels: ['frontend', 'vue', 'component'],
     lastModified: Date.now(),
-    name: 'Vue组件开发',
+    name: 'Vue Component Development',
     repoName: 'vue-templates',
-    summary: 'Vue 组件开发最佳实践',
+    summary: 'Vue component development best practices',
     type: 'prompt',
   },
 ]
@@ -96,9 +99,9 @@ describe('SearchService', () => {
     vi.clearAllMocks()
   })
 
-  describe('基本搜索功能', () => {
-    test('成功搜索模板', async () => {
-      // Mock 配置和索引
+  describe('Basic search functionality', () => {
+    test('Successfully search templates', async () => {
+      // Mock configuration and index
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: mockRepoConfigs,
@@ -113,7 +116,7 @@ describe('SearchService', () => {
         version: '1.0.0',
       })
 
-      // Mock 搜索结果
+      // Mock search results
       const mockSearchResults: SearchResult[] = [
         {
           matchedFields: ['name', 'labels'],
@@ -124,28 +127,28 @@ describe('SearchService', () => {
       vi.mocked(fuzzysortSearch).mockReturnValue(mockSearchResults)
 
       const results = await searchService.searchTemplates({
-        keyword: '前端',
+        keyword: 'frontend',
       })
 
       expect(results).toHaveLength(1)
       expect(results[0]).toEqual(mockSearchResults[0])
-      expect(configService.resolveConfig).toHaveBeenCalledWith({ forceGlobal: false })
+      expect(configService.resolveConfig).toHaveBeenCalledWith({forceGlobal: false})
       expect(getTemplateIndex).toHaveBeenCalledWith(mockRepoConfigs)
       expect(fuzzysortSearch).toHaveBeenCalledWith(
         mockIndexedTemplates,
-        '前端',
+        'frontend',
         expect.objectContaining({
           enablePinyin: true,
           limit: 10, // 默认 maxDisplayResults 是 10
-          threshold: -10000,
+          threshold: -10_000,
           weights: expect.objectContaining({
-            id: 4,
-            name: 3,
-            labels: 2,
-            summary: 2,
             content: 1,
+            id: 4,
+            labels: 2,
+            name: 3,
+            summary: 2,
           }),
-        })
+        }),
       )
     })
 
@@ -179,7 +182,7 @@ describe('SearchService', () => {
       expect(fuzzysortSearch).toHaveBeenCalledWith(
         mockIndexedTemplates,
         '',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -201,11 +204,11 @@ describe('SearchService', () => {
       vi.mocked(fuzzysortSearch).mockReturnValue([])
 
       await searchService.searchTemplates({
-        keyword: 'test',
         forceGlobal: true,
+        keyword: 'test',
       })
 
-      expect(configService.resolveConfig).toHaveBeenCalledWith({ forceGlobal: true })
+      expect(configService.resolveConfig).toHaveBeenCalledWith({forceGlobal: true})
     })
   })
 
@@ -237,10 +240,10 @@ describe('SearchService', () => {
       // 验证传递给搜索引擎的模板只包含 prompt 类型
       expect(fuzzysortSearch).toHaveBeenCalledWith(
         expect.arrayContaining([
-          expect.objectContaining({ type: 'prompt' }),
+          expect.objectContaining({type: 'prompt'}),
         ]),
         'test',
-        expect.any(Object)
+        expect.any(Object),
       )
 
       const passedTemplates = (fuzzysortSearch as any).mock.calls[0][0]
@@ -260,8 +263,8 @@ describe('SearchService', () => {
       expect(passedTemplates.length).toBeGreaterThan(0)
       expect(
         passedTemplates.every((t: any) =>
-          t.labels.some((label: string) => ['frontend', 'vue'].includes(label))
-        )
+          t.labels.some((label: string) => ['frontend', 'vue'].includes(label)),
+        ),
       ).toBe(true)
     })
 
@@ -270,8 +273,8 @@ describe('SearchService', () => {
 
       await searchService.searchTemplates({
         keyword: 'test',
-        labels: ['frontend', 'react'],
         labelMatchAll: true,
+        labels: ['frontend', 'react'],
       })
 
       // 验证传递给搜索引擎的模板包含所有指定标签
@@ -279,8 +282,8 @@ describe('SearchService', () => {
       expect(passedTemplates.length).toBeGreaterThan(0)
       expect(
         passedTemplates.every((t: any) =>
-          ['frontend', 'react'].every(label => t.labels.includes(label))
-        )
+          ['frontend', 'react'].every(label => t.labels.includes(label)),
+        ),
       ).toBe(true)
     })
 
@@ -294,7 +297,7 @@ describe('SearchService', () => {
 
       // 验证配置只包含指定的仓库
       expect(getTemplateIndex).toHaveBeenCalledWith([
-        expect.objectContaining({ name: 'vue-templates' }),
+        expect.objectContaining({name: 'vue-templates'}),
       ])
     })
 
@@ -338,7 +341,7 @@ describe('SearchService', () => {
         'test',
         expect.objectContaining({
           limit: 5,
-        })
+        }),
       )
     })
 
@@ -353,14 +356,14 @@ describe('SearchService', () => {
         'test',
         expect.objectContaining({
           threshold: -5000,
-        })
+        }),
       )
     })
 
     test('禁用拼音搜索', async () => {
       await searchService.searchTemplates({
-        keyword: 'test',
         enablePinyin: false,
+        keyword: 'test',
       })
 
       expect(fuzzysortSearch).toHaveBeenCalledWith(
@@ -368,7 +371,7 @@ describe('SearchService', () => {
         'test',
         expect.objectContaining({
           enablePinyin: false,
-        })
+        }),
       )
     })
 
@@ -381,7 +384,7 @@ describe('SearchService', () => {
         expect.objectContaining({
           enablePinyin: true,
           limit: 10, // 默认 maxDisplayResults 是 10
-          threshold: -10000, // 默认阈值
+          threshold: -10_000, // 默认阈值
           weights: {
             content: 1,
             id: 4,
@@ -389,7 +392,7 @@ describe('SearchService', () => {
             name: 3,
             summary: 2,
           },
-        })
+        }),
       )
     })
   })
@@ -425,7 +428,7 @@ describe('SearchService', () => {
       await expect(
         searchService.searchTemplates({
           keyword: 'test',
-        })
+        }),
       ).rejects.toThrow('Index build failed')
     })
 
@@ -451,7 +454,7 @@ describe('SearchService', () => {
       await expect(
         searchService.searchTemplates({
           keyword: 'test',
-        })
+        }),
       ).rejects.toThrow('Search engine error')
     })
 
@@ -502,10 +505,11 @@ describe('SearchService', () => {
         labels: [],
       })
 
+      expect(results).toEqual([])
       expect(fuzzysortSearch).toHaveBeenCalledWith(
         mockIndexedTemplates,
         'test',
-        expect.any(Object)
+        expect.any(Object),
       )
     })
 
@@ -527,16 +531,17 @@ describe('SearchService', () => {
       vi.mocked(fuzzysortSearch).mockReturnValue([])
 
       const specialKeywords = ['@#$%', '  ', '中文混合English123', '']
-      
+
+      // eslint-disable-next-line no-await-in-loop
       for (const keyword of specialKeywords) {
         await searchService.searchTemplates({
           keyword,
         })
-        
+
         expect(fuzzysortSearch).toHaveBeenCalledWith(
           expect.any(Array),
           keyword,
-          expect.any(Object)
+          expect.any(Object),
         )
       }
     })

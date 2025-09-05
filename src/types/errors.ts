@@ -1,13 +1,10 @@
 /**
  * Error type definitions
  */
-import { t } from '../i18n'
+import {t} from '../i18n'
 
 // Base error class
 export abstract class ACError extends Error {
-  abstract code: string
-  abstract suggestion?: string
-
   constructor(message: string) {
     super(message)
     this.name = this.constructor.name
@@ -18,11 +15,17 @@ export abstract class ACError extends Error {
     if (this.suggestion) {
       output += `\n💡 ${t('common.suggestion')}: ${this.suggestion}`
     }
+
     if (this.code) {
       output += `\n🔍 ${t('common.error_code')}: ${this.code}`
     }
+
     return output
   }
+
+  abstract code: string
+
+  abstract suggestion?: string
 }
 
 // Configuration related errors

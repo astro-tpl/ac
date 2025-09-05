@@ -1,36 +1,39 @@
 /**
- * 搜索相关 hooks 测试
- * 测试 useSearch hook 的状态管理和用户交互功能
+ * Search-related hooks tests
+ * Test useSearch hook's state management and user interaction functionality
  */
 
-import { renderHook, act } from '@testing-library/react'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
-import type { SearchResult } from '@/types/template'
+import type {SearchResult} from '@/types/template'
 
-// Mock 搜索服务
+import {act, renderHook} from '@testing-library/react'
+import {
+  beforeEach, describe, expect, test, vi,
+} from 'vitest'
+
+// Mock search service
 vi.mock('@/core/search.service', () => ({
   SearchService: vi.fn(() => ({
     searchTemplates: vi.fn(),
   })),
 }))
 
-import { useSearch } from '@/ui/hooks/useSearch'
-import { SearchService } from '@/core/search.service'
+import {SearchService} from '@/core/search.service'
+import {useSearch} from '@/ui/hooks/useSearch'
 
-// 测试用的搜索结果
+// Test search results
 const mockSearchResults: SearchResult[] = [
   {
     matchedFields: ['name'],
     score: 100,
     template: {
       absPath: '/test/frontend-review.yaml',
-      content: '前端代码评审规范',
+      content: 'Frontend code review specifications',
       id: 'frontend-review-v1',
       labels: ['frontend', 'review', 'react'],
       lastModified: Date.now(),
-      name: '前端代码评审',
+      name: 'Frontend Code Review',
       repoName: 'templates',
-      summary: 'React 前端代码评审提示词',
+      summary: 'React frontend code review prompt',
       type: 'prompt',
     },
   },
@@ -39,11 +42,11 @@ const mockSearchResults: SearchResult[] = [
     score: 80,
     template: {
       absPath: '/test/vue-component.yaml',
-      content: 'Vue 组件开发规范',
+      content: 'Vue component development specifications',
       id: 'vue-component-v1',
       labels: ['frontend', 'vue', 'component'],
       lastModified: Date.now(),
-      name: 'Vue组件开发',
+      name: 'Vue Component Development',
       repoName: 'templates',
       summary: 'Vue 组件开发最佳实践',
       type: 'prompt',
@@ -64,7 +67,7 @@ describe('useSearch Hook', () => {
 
   describe('初始状态', () => {
     test('应该返回正确的初始状态', () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       expect(result.current.searchState.results).toEqual([])
       expect(result.current.searchState.isLoading).toBe(false)
@@ -88,7 +91,7 @@ describe('useSearch Hook', () => {
         threshold: -5000,
       }
 
-      const { result } = renderHook(() => useSearch({ config: customConfig }))
+      const {result} = renderHook(() => useSearch({config: customConfig}))
 
       // Hook 应该接受自定义配置，但初始状态仍然是默认的
       expect(result.current.searchState.results).toEqual([])
@@ -99,7 +102,7 @@ describe('useSearch Hook', () => {
     test('应该执行搜索并更新结果', async () => {
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       // 执行搜索
       await act(async () => {
@@ -116,7 +119,7 @@ describe('useSearch Hook', () => {
         labels: [],
         maxResults: 20,
         repoName: undefined,
-        threshold: -10000,
+        threshold: -10_000,
         type: undefined,
       })
     })
@@ -124,7 +127,7 @@ describe('useSearch Hook', () => {
     test('应该处理空搜索结果', async () => {
       mockSearchService.searchTemplates.mockResolvedValue([])
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('不存在的模板')
@@ -139,7 +142,7 @@ describe('useSearch Hook', () => {
       mockSearchService.searchTemplates.mockRejectedValue(searchError)
 
       const onError = vi.fn()
-      const { result } = renderHook(() => useSearch({ onError }))
+      const {result} = renderHook(() => useSearch({onError}))
 
       await act(async () => {
         result.current.search('错误查询')
@@ -152,12 +155,12 @@ describe('useSearch Hook', () => {
 
     test('应该完成异步搜索', async () => {
       let resolveSearch: (value: SearchResult[]) => void
-      const searchPromise = new Promise<SearchResult[]>((resolve) => {
+      const searchPromise = new Promise<SearchResult[]>(resolve => {
         resolveSearch = resolve
       })
       mockSearchService.searchTemplates.mockReturnValue(searchPromise)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       // 开始搜索
       act(() => {
@@ -178,7 +181,7 @@ describe('useSearch Hook', () => {
     test('应该清空搜索结果并重置状态', async () => {
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       // 先执行搜索
       await act(async () => {
@@ -204,7 +207,7 @@ describe('useSearch Hook', () => {
     })
 
     test('应该支持向下导航', async () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('前端')
@@ -228,7 +231,7 @@ describe('useSearch Hook', () => {
     })
 
     test('应该支持向上导航', async () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('前端')
@@ -252,7 +255,7 @@ describe('useSearch Hook', () => {
     })
 
     test('没有结果时导航应该不产生效果', () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       expect(result.current.searchState.selectedIndex).toBe(0)
 
@@ -276,7 +279,7 @@ describe('useSearch Hook', () => {
     })
 
     test('应该选择指定的结果', async () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('前端')
@@ -292,7 +295,7 @@ describe('useSearch Hook', () => {
     })
 
     test('选择无效索引时应该限制到有效范围', async () => {
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('前端')
@@ -312,7 +315,7 @@ describe('useSearch Hook', () => {
     test('应该设置过滤器并重新搜索', async () => {
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       // 先搜索一次
       await act(async () => {
@@ -340,7 +343,7 @@ describe('useSearch Hook', () => {
         labels: ['react'],
         maxResults: 20,
         repoName: undefined,
-        threshold: -10000,
+        threshold: -10_000,
         type: 'prompt',
       })
     })
@@ -351,7 +354,7 @@ describe('useSearch Hook', () => {
       const onResults = vi.fn()
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch({ onResults }))
+      const {result} = renderHook(() => useSearch({onResults}))
 
       await act(async () => {
         result.current.search('前端')
@@ -368,7 +371,7 @@ describe('useSearch Hook', () => {
       const searchError = new Error('Search failed')
       mockSearchService.searchTemplates.mockRejectedValue(searchError)
 
-      const { result } = renderHook(() => useSearch({ onError }))
+      const {result} = renderHook(() => useSearch({onError}))
 
       await act(async () => {
         result.current.search('错误查询')
@@ -382,7 +385,7 @@ describe('useSearch Hook', () => {
     test('应该处理空查询字符串', async () => {
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('')
@@ -394,7 +397,7 @@ describe('useSearch Hook', () => {
         labels: [],
         maxResults: 20,
         repoName: undefined,
-        threshold: -10000,
+        threshold: -10_000,
         type: undefined,
       })
     })
@@ -402,7 +405,7 @@ describe('useSearch Hook', () => {
     test('应该处理连续的搜索调用', async () => {
       mockSearchService.searchTemplates.mockResolvedValue(mockSearchResults)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       // 连续搜索
       await act(async () => {
@@ -414,7 +417,7 @@ describe('useSearch Hook', () => {
       // 应该执行所有搜索
       expect(mockSearchService.searchTemplates).toHaveBeenCalledTimes(3)
       expect(mockSearchService.searchTemplates).toHaveBeenLastCalledWith(
-        expect.objectContaining({ keyword: 'query3' })
+        expect.objectContaining({keyword: 'query3'}),
       )
     })
 
@@ -422,7 +425,7 @@ describe('useSearch Hook', () => {
       // 返回 null 或 undefined
       mockSearchService.searchTemplates.mockResolvedValue(null)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('test')
@@ -435,7 +438,7 @@ describe('useSearch Hook', () => {
       const timeoutError = new Error('Search timeout')
       mockSearchService.searchTemplates.mockRejectedValue(timeoutError)
 
-      const { result } = renderHook(() => useSearch())
+      const {result} = renderHook(() => useSearch())
 
       await act(async () => {
         result.current.search('slow query')

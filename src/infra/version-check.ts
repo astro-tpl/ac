@@ -2,9 +2,9 @@
  * Version compatibility check utility
  */
 
-import { CURRENT_CONFIG_VERSION } from '../config/constants'
-import { VersionIncompatibleError } from '../types/errors'
-import { t } from '../i18n'
+import {CURRENT_CONFIG_VERSION} from '../config/constants'
+import {t} from '../i18n'
+import {VersionIncompatibleError} from '../types/errors'
 
 /**
  * Check configuration version compatibility
@@ -13,10 +13,10 @@ import { t } from '../i18n'
 export function checkVersionCompatibility(configVersion: number): void {
   const currentMajor = Math.floor(CURRENT_CONFIG_VERSION)
   const configMajor = Math.floor(configVersion)
-  
+
   if (currentMajor !== configMajor) {
     throw new VersionIncompatibleError(
-      t('version.error.incompatible', { configVersion, currentVersion: CURRENT_CONFIG_VERSION })
+      t('version.error.incompatible', {configVersion, currentVersion: CURRENT_CONFIG_VERSION}),
     )
   }
 }
@@ -32,15 +32,15 @@ export function isValidVersion(version: unknown): version is number {
  * Get version compatibility information
  */
 export function getVersionCompatibilityInfo(configVersion: number): {
-  isCompatible: boolean
-  currentMajor: number
   configMajor: number
+  currentMajor: number
+  isCompatible: boolean
   message: string
 } {
   const currentMajor = Math.floor(CURRENT_CONFIG_VERSION)
   const configMajor = Math.floor(configVersion)
   const isCompatible = currentMajor === configMajor
-  
+
   let message: string
   if (isCompatible) {
     message = t('version.compatible')
@@ -49,12 +49,12 @@ export function getVersionCompatibilityInfo(configVersion: number): {
   } else {
     message = t('version.config_too_high')
   }
-  
+
   return {
-    isCompatible,
-    currentMajor,
     configMajor,
-    message
+    currentMajor,
+    isCompatible,
+    message,
   }
 }
 
@@ -71,12 +71,14 @@ export function formatVersion(version: number): string {
 export function getUpgradeSuggestion(configVersion: number): string {
   const currentMajor = Math.floor(CURRENT_CONFIG_VERSION)
   const configMajor = Math.floor(configVersion)
-  
+
   if (configMajor < currentMajor) {
-    return t('version.suggestion.upgrade_config', { version: formatVersion(CURRENT_CONFIG_VERSION) })
-  } else if (configMajor > currentMajor) {
-    return t('version.suggestion.upgrade_tool', { version: formatVersion(configVersion) })
+    return t('version.suggestion.upgrade_config', {version: formatVersion(CURRENT_CONFIG_VERSION)})
   }
-  
+
+  if (configMajor > currentMajor) {
+    return t('version.suggestion.upgrade_tool', {version: formatVersion(configVersion)})
+  }
+
   return t('version.suggestion.compatible')
 }

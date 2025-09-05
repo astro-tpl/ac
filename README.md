@@ -1,68 +1,74 @@
 # AC - AI Context CLI
 
-AI Context CLI - 统一管理 AI 编程上下文与提示词的命令行工具
+AI Context CLI - A unified command-line tool for managing AI programming contexts and prompts
 
-## 安装
+## Installation
 
 ```bash
-npm install -g ac
+npm install -g @astro-tpl/ac
 ```
 
-## 使用
+or
 
-### 搜索模板
 ```bash
-# 搜索所有模板
+npx @astro-tpl/ac --help
+```
+
+## Usage
+
+### Search Templates
+```bash
+# Search all templates
 ac search
 
-# 按关键词搜索
+# Search by keyword
 ac search react
 
-# 按类型搜索
+# Search by type
 ac search --type context
 
-# 按标签搜索
+# Search by labels
 ac search --label frontend
 ```
 
-### 应用模板
+### Apply Templates
 ```bash
-# 应用上下文模板
+# Apply context template
 ac apply --context template-id
 
-# 应用提示词模板
+# Apply prompt template
 ac apply --prompt template-id
 ```
 
-### 管理仓库
+### Manage Repositories
 ```bash
-# 添加仓库
+# Add repository
 ac repo add <alias> <url>
 
-# 列出仓库
+# List repositories
 ac repo list
 
-# 更新仓库
+# Update repository
 ac repo update <alias>
 ```
 
-### 更新 CLI
+### Update CLI
 ```bash
 ac update
 ```
 
-## 功能特性
+## Features
 
-- 🔍 智能搜索 - 支持关键词、类型、标签搜索
-- 📋 模板应用 - 快速应用上下文和提示词模板
-- 🗂️ 仓库管理 - 管理多个模板仓库
-- 🌐 国际化 - 支持中英文界面
-- ⚡ 高性能 - 基于 fuzzysort 的快速搜索
-- 🎯 智能匹配 - 支持中文拼音搜索
+- 🔍 Intelligent Search - Support keyword, type, and label search
+- 📋 Template Application - Quickly apply context and prompt templates
+- 🗂️ Repository Management - Manage multiple template repositories
+- 🌐 Internationalization - Support for Chinese and English interfaces
+- ⚡ High Performance - Fast search based on fuzzysort
+- 🎯 Smart Matching - Support Chinese pinyin search
 
-## 配置
+## Configuration
 
-### 项目配置 (.ac.yaml)
+### Project Configuration (.ac.yaml)
 ```yaml
 repositories:
   templates:
@@ -70,7 +76,7 @@ repositories:
     branch: main
 ```
 
-### 全局配置 (~/.ac/config.yaml)
+### Global Configuration (~/.ac/config.yaml)
 ```yaml
 language: zh
 repositories:
@@ -78,18 +84,18 @@ repositories:
     url: https://github.com/global/templates.git
 ```
 
-## 开发
+## Development
 
 ```bash
-# 安装依赖
+# Install dependencies
 pnpm install
 
-# 构建
+# Build
 npm run build
 
-# 测试
+# Test
 npm test
 
-# 打包
+# Package
 npm run pack
 ```

@@ -3,15 +3,18 @@
  * Test template loading, parsing, validation and other functions
  */
 
-import type { RepoConfig } from '@/types/config'
-import type { ContextTemplate, PromptTemplate } from '@/types/template'
-import { TemplateService } from '@/core/template.service'
+import type {RepoConfig} from '@/types/config'
+import type {ContextTemplate, PromptTemplate} from '@/types/template'
+
+import {TemplateService} from '@/core/template.service'
 import {
   RepoNotFoundError,
   TemplateNotFoundError,
   TemplateValidationError,
 } from '@/types/errors'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import {
+  beforeEach, describe, expect, test, vi,
+} from 'vitest'
 
 // Mock file system and configuration service
 vi.mock('@/infra/fs', () => ({
@@ -42,10 +45,10 @@ vi.mock('@/infra/logger', () => ({
   },
 }))
 
-import { configService } from '@/core/config.service'
-import { getRepoPath } from '@/config/paths'
-import { fileExists, scanDirectory } from '@/infra/fs'
-import { readYamlFile } from '@/infra/yaml'
+import {getRepoPath} from '@/config/paths'
+import {configService} from '@/core/config.service'
+import {fileExists, scanDirectory} from '@/infra/fs'
+import {readYamlFile} from '@/infra/yaml'
 
 // Test template data
 const mockPromptTemplate: PromptTemplate = {
@@ -112,7 +115,7 @@ describe('TemplateService', () => {
       const result = await templateService.loadTemplate('frontend-review-v1')
 
       expect(result).toEqual(mockPromptTemplate)
-      expect(configService.resolveConfig).toHaveBeenCalledWith({ forceGlobal: false })
+      expect(configService.resolveConfig).toHaveBeenCalledWith({forceGlobal: false})
       expect(scanDirectory).toHaveBeenCalledWith('/test/templates', {
         extensions: ['.yaml', '.yml'],
         includeHidden: false,
@@ -178,7 +181,7 @@ describe('TemplateService', () => {
       })
 
       await expect(
-        templateService.loadTemplate('nonexistent-template')
+        templateService.loadTemplate('nonexistent-template'),
       ).rejects.toThrow(TemplateNotFoundError)
     })
 
@@ -194,7 +197,7 @@ describe('TemplateService', () => {
       await expect(
         templateService.loadTemplate('test-template', {
           repoName: 'nonexistent-repo',
-        })
+        }),
       ).rejects.toThrow(RepoNotFoundError)
     })
 
@@ -208,11 +211,11 @@ describe('TemplateService', () => {
       })
 
       await expect(
-        templateService.loadTemplate('test-template')
+        templateService.loadTemplate('test-template'),
       ).rejects.toThrow(RepoNotFoundError)
     })
 
-    test('仓库目录不存在时抛出模板未找到错误', async () => {
+    test('Throw template not found error when repository directory does not exist', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -224,15 +227,15 @@ describe('TemplateService', () => {
       vi.mocked(getRepoPath).mockReturnValue('/test/templates')
       vi.mocked(fileExists).mockResolvedValue(false)
 
-      // 当仓库目录不存在时，会在所有仓库中搜索失败，最终抛出模板未找到错误
+      // When repository directory doesn't exist, search will fail in all repositories, ultimately throwing template not found error
       await expect(
-        templateService.loadTemplate('test-template')
+        templateService.loadTemplate('test-template'),
       ).rejects.toThrow(TemplateNotFoundError)
     })
   })
 
-  describe('批量加载模板功能', () => {
-    test('成功加载多个模板', async () => {
+  describe('Batch template loading functionality', () => {
+    test('Successfully load multiple templates', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -248,12 +251,12 @@ describe('TemplateService', () => {
         '/test/templates/context.yaml',
       ])
 
-      // Mock 不同的模板文件
+      // Mock different template files
       vi.mocked(readYamlFile)
-        .mockResolvedValueOnce(mockPromptTemplate)
-        .mockResolvedValueOnce(mockContextTemplate)
-        .mockResolvedValueOnce(mockPromptTemplate) // 第二次调用同一模板
-        .mockResolvedValueOnce(mockContextTemplate)
+      .mockResolvedValueOnce(mockPromptTemplate)
+      .mockResolvedValueOnce(mockContextTemplate)
+      .mockResolvedValueOnce(mockPromptTemplate) // Second call to the same template
+      .mockResolvedValueOnce(mockContextTemplate)
 
       const result = await templateService.loadTemplates([
         'frontend-review-v1',
@@ -266,7 +269,7 @@ describe('TemplateService', () => {
       expect(result.templates[1]).toEqual(mockContextTemplate)
     })
 
-    test('部分模板加载失败时继续加载其他模板', async () => {
+    test('Continue loading other templates when some templates fail to load', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -278,8 +281,8 @@ describe('TemplateService', () => {
       vi.mocked(getRepoPath).mockReturnValue('/test/templates')
       vi.mocked(fileExists).mockResolvedValue(true)
       vi.mocked(scanDirectory).mockResolvedValue(['/test/templates/prompt.yaml'])
-      
-      // 只能找到一个模板
+
+      // Only one template can be found
       vi.mocked(readYamlFile).mockResolvedValue(mockPromptTemplate)
 
       const result = await templateService.loadTemplates([
@@ -293,7 +296,7 @@ describe('TemplateService', () => {
       expect(result.errors[0].id).toBe('nonexistent-template')
     })
 
-    test('设置 continueOnError=false 时遇到错误停止加载', async () => {
+    test('Stop loading when error is encountered with continueOnError=false', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [],
@@ -305,14 +308,14 @@ describe('TemplateService', () => {
       await expect(
         templateService.loadTemplates(
           ['template1', 'template2'],
-          { continueOnError: false }
-        )
+          {continueOnError: false},
+        ),
       ).rejects.toThrow(RepoNotFoundError)
     })
   })
 
-  describe('仓库模板加载功能', () => {
-    test('加载指定仓库的所有模板', async () => {
+  describe('Repository template loading functionality', () => {
+    test('Load all templates from specified repository', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -329,8 +332,8 @@ describe('TemplateService', () => {
       ])
 
       vi.mocked(readYamlFile)
-        .mockResolvedValueOnce(mockPromptTemplate)
-        .mockResolvedValueOnce(mockContextTemplate)
+      .mockResolvedValueOnce(mockPromptTemplate)
+      .mockResolvedValueOnce(mockContextTemplate)
 
       const result = await templateService.loadAllTemplatesFromRepo('templates')
 
@@ -339,7 +342,7 @@ describe('TemplateService', () => {
       expect(result[1]).toEqual(mockContextTemplate)
     })
 
-    test('直接加载不存在仓库的模板时抛出仓库未找到错误', async () => {
+    test('Throw repository not found error when loading templates from non-existent repository', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -352,13 +355,13 @@ describe('TemplateService', () => {
       vi.mocked(fileExists).mockResolvedValue(false)
 
       await expect(
-        templateService.loadAllTemplatesFromRepo('templates')
+        templateService.loadAllTemplatesFromRepo('templates'),
       ).rejects.toThrow(RepoNotFoundError)
     })
   })
 
-  describe('模板验证功能', () => {
-    test('验证有效的 Prompt 模板', () => {
+  describe('Template validation functionality', () => {
+    test('Validate valid Prompt template', () => {
       expect(() => {
         templateService.validateTemplateStructure(mockPromptTemplate)
       }).not.toThrow()
@@ -461,7 +464,7 @@ describe('TemplateService', () => {
   describe('工具函数', () => {
     test('获取模板摘要信息', () => {
       const promptSummary = templateService.getTemplateSummary(mockPromptTemplate)
-      
+
       expect(promptSummary).toEqual({
         id: mockPromptTemplate.id,
         labels: mockPromptTemplate.labels,
@@ -471,7 +474,7 @@ describe('TemplateService', () => {
       })
 
       const contextSummary = templateService.getTemplateSummary(mockContextTemplate)
-      
+
       expect(contextSummary).toEqual({
         id: mockContextTemplate.id,
         labels: mockContextTemplate.labels,
@@ -485,11 +488,11 @@ describe('TemplateService', () => {
     test('检查模板标签匹配', () => {
       // 匹配任意标签
       expect(
-        templateService.templateMatchesLabels(mockPromptTemplate, ['frontend'])
+        templateService.templateMatchesLabels(mockPromptTemplate, ['frontend']),
       ).toBe(true)
-      
+
       expect(
-        templateService.templateMatchesLabels(mockPromptTemplate, ['backend'])
+        templateService.templateMatchesLabels(mockPromptTemplate, ['backend']),
       ).toBe(false)
 
       // 匹配所有标签
@@ -497,21 +500,21 @@ describe('TemplateService', () => {
         templateService.templateMatchesLabels(
           mockPromptTemplate,
           ['frontend', 'react'],
-          true
-        )
+          true,
+        ),
       ).toBe(true)
 
       expect(
         templateService.templateMatchesLabels(
           mockPromptTemplate,
           ['frontend', 'vue'],
-          true
-        )
+          true,
+        ),
       ).toBe(false)
 
       // 空标签列表应该总是返回 true
       expect(
-        templateService.templateMatchesLabels(mockPromptTemplate, [])
+        templateService.templateMatchesLabels(mockPromptTemplate, []),
       ).toBe(true)
     })
 
@@ -547,7 +550,7 @@ describe('TemplateService', () => {
       vi.mocked(readYamlFile).mockRejectedValue(new Error('Invalid YAML'))
 
       await expect(
-        templateService.loadTemplate('test-template')
+        templateService.loadTemplate('test-template'),
       ).rejects.toThrow(TemplateNotFoundError)
     })
 

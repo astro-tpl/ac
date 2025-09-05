@@ -1,50 +1,50 @@
-import { useEffect, useCallback, useState } from 'react'
-import { useInput } from 'ink'
-import { KeyBindings, DEFAULT_KEY_BINDINGS } from '@/types/ui'
+import {DEFAULT_KEY_BINDINGS, KeyBindings} from '@/types/ui'
+import {useInput} from 'ink'
+import {useCallback, useEffect, useState} from 'react'
 
-export type KeyboardAction = 
-  | 'up'
-  | 'down'
-  | 'select'
-  | 'back'
-  | 'quit'
+export type KeyboardAction =
   | 'apply'
-  | 'copy'
-  | 'toggle_detail'
+  | 'back'
   | 'clear_search'
+  | 'copy'
+  | 'down'
   | 'help'
+  | 'quit'
+  | 'select'
+  | 'toggle_detail'
+  | 'up'
 
 interface UseKeyboardOptions {
+  disabled?: boolean
   keyBindings?: Partial<KeyBindings>
   onAction?: (action: KeyboardAction, key: string) => void
-  disabled?: boolean
 }
 
 interface UseKeyboardReturn {
-  lastAction: KeyboardAction | null
-  lastKey: string | null
   clearLastAction: () => void
+  lastAction: KeyboardAction | null
+  lastKey: null | string
 }
 
 export function useKeyboard(options: UseKeyboardOptions = {}): UseKeyboardReturn {
-  const { keyBindings: userBindings = {}, onAction, disabled = false } = options
-  
+  const {disabled = false, keyBindings: userBindings = {}, onAction} = options
+
   // Merge user bindings with defaults
-  const keyBindings = { ...DEFAULT_KEY_BINDINGS, ...userBindings }
-  
+  const keyBindings = {...DEFAULT_KEY_BINDINGS, ...userBindings}
+
   const [lastAction, setLastAction] = useState<KeyboardAction | null>(null)
-  const [lastKey, setLastKey] = useState<string | null>(null)
-  
+  const [lastKey, setLastKey] = useState<null | string>(null)
+
   const clearLastAction = useCallback(() => {
     setLastAction(null)
     setLastKey(null)
   }, [])
-  
+
   const handleKeyPress = useCallback((input: string, key: any) => {
     if (disabled) return
-    
+
     let action: KeyboardAction | null = null
-    
+
     // Handle special keys
     if (key.upArrow) {
       action = 'up'
@@ -59,114 +59,171 @@ export function useKeyboard(options: UseKeyboardOptions = {}): UseKeyboardReturn
     } else if (key.ctrl) {
       // Handle Ctrl + character combinations
       const inputLower = input.toLowerCase()
-      
-      if (inputLower === 'j') {
+
+      switch (inputLower) {
+      case 'j': {
         action = 'down'
-      } else if (inputLower === 'k') {
+
+        break
+      }
+
+      case 'k': {
         action = 'up'
-      } else if (inputLower === 'a') {
+
+        break
+      }
+
+      case 'a': {
         action = 'apply'
-      } else if (inputLower === 'y') {
+
+        break
+      }
+
+      case 'y': {
         action = 'copy'
-      } else if (inputLower === 'd') {
+
+        break
+      }
+
+      case 'd': {
         action = 'toggle_detail'
-      } else if (inputLower === 'u') {
+
+        break
+      }
+
+      case 'u': {
         action = 'clear_search'
-      } else if (inputLower === 'h') {
+
+        break
+      }
+
+      case 'h': {
         action = 'help'
-      } else if (inputLower === 'q') {
+
+        break
+      }
+
+      case 'q': {
         action = 'quit'
-      } else if (inputLower === 'b') {
+
+        break
+      }
+
+      case 'b': {
         action = 'back'
+
+        break
+      }
+      // No default
       }
     }
-    
+
     if (action) {
       setLastAction(action)
       setLastKey(input)
       onAction?.(action, input)
     }
   }, [disabled, keyBindings, onAction])
-  
-  useInput(handleKeyPress, { isActive: !disabled })
-  
+
+  useInput(handleKeyPress, {isActive: !disabled})
+
   return {
+    clearLastAction,
     lastAction,
     lastKey,
-    clearLastAction
   }
 }
 
 // Helper hook for navigation-specific keyboard handling
 export function useNavigationKeyboard(options: {
-  onUp?: () => void
-  onDown?: () => void
-  onSelect?: () => void
-  onBack?: () => void
-  onQuit?: () => void
   disabled?: boolean
+  onBack?: () => void
+  onDown?: () => void
+  onQuit?: () => void
+  onSelect?: () => void
+  onUp?: () => void
 }) {
-  const { onUp, onDown, onSelect, onBack, onQuit, disabled } = options
-  
+  const {disabled, onBack, onDown, onQuit, onSelect, onUp} = options
+
   return useKeyboard({
-    onAction: (action) => {
+    disabled,
+    onAction(action) {
       switch (action) {
-        case 'up':
-          onUp?.()
-          break
-        case 'down':
-          onDown?.()
-          break
-        case 'select':
-          onSelect?.()
-          break
-        case 'back':
-          onBack?.()
-          break
-        case 'quit':
-          onQuit?.()
-          break
+      case 'up': {
+        onUp?.()
+        break
+      }
+
+      case 'down': {
+        onDown?.()
+        break
+      }
+
+      case 'select': {
+        onSelect?.()
+        break
+      }
+
+      case 'back': {
+        onBack?.()
+        break
+      }
+
+      case 'quit': {
+        onQuit?.()
+        break
+      }
       }
     },
-    disabled
   })
 }
 
 // Helper hook for search-specific keyboard handling
 export function useSearchKeyboard(options: {
+  disabled?: boolean
   onApply?: () => void
-  onCopy?: () => void
-  onToggleDetail?: () => void
   onClearSearch?: () => void
+  onCopy?: () => void
   onHelp?: () => void
   onQuit?: () => void
-  disabled?: boolean
+  onToggleDetail?: () => void
 }) {
-  const { onApply, onCopy, onToggleDetail, onClearSearch, onHelp, onQuit, disabled } = options
-  
+  const {disabled, onApply, onClearSearch, onCopy, onHelp, onQuit, onToggleDetail} = options
+
   return useKeyboard({
-    onAction: (action) => {
+    disabled,
+    onAction(action) {
       switch (action) {
-        case 'apply':
-          onApply?.()
-          break
-        case 'copy':
-          onCopy?.()
-          break
-        case 'toggle_detail':
-          onToggleDetail?.()
-          break
-        case 'clear_search':
-          onClearSearch?.()
-          break
-        case 'help':
-          onHelp?.()
-          break
-        case 'quit':
-          onQuit?.()
-          break
+      case 'apply': {
+        onApply?.()
+        break
+      }
+
+      case 'copy': {
+        onCopy?.()
+        break
+      }
+
+      case 'toggle_detail': {
+        onToggleDetail?.()
+        break
+      }
+
+      case 'clear_search': {
+        onClearSearch?.()
+        break
+      }
+
+      case 'help': {
+        onHelp?.()
+        break
+      }
+
+      case 'quit': {
+        onQuit?.()
+        break
+      }
       }
     },
-    disabled
   })
 }

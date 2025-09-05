@@ -4,54 +4,54 @@
 
 // Repository configuration
 export interface RepoConfig {
-  /** Repository alias */
-  name: string
-  /** Git URL */
-  git: string
   /** Branch name */
   branch: string
+  /** Git URL */
+  git: string
+  /** Repository alias */
+  name: string
   /** Local path (optional, default concatenated by rules) */
   path?: string
 }
 
 // Default configuration
 export interface DefaultConfig {
-  /** Default repository alias */
-  repo: string
   /** Default target directory */
   dest: string
-  /** Default write mode */
-  mode: 'write' | 'append' | 'merge'
   /** Default language */
   lang: string
+  /** Default write mode */
+  mode: 'append' | 'merge' | 'write'
+  /** Default repository alias */
+  repo: string
 }
 
 // Project configuration file (.ac.yaml)
 export interface ProjectConfig {
-  /** Configuration version */
-  version: number
-  /** Repository list */
-  repos: RepoConfig[]
   /** Default configuration */
   defaults: DefaultConfig
+  /** Repository list */
+  repos: RepoConfig[]
+  /** Configuration version */
+  version: number
 }
 
 // Global configuration file (~/.ac/config.yaml)
 export interface GlobalConfig {
-  /** Configuration version */
-  version: number
-  /** Repository list */
-  repos: RepoConfig[]
   /** Default configuration */
   defaults: DefaultConfig
+  /** Repository list */
+  repos: RepoConfig[]
+  /** Configuration version */
+  version: number
 }
 
 // Configuration resolution result
 export interface ResolvedConfig {
-  /** Configuration source type */
-  source: 'project' | 'global'
+  /** Configuration content */
+  config: GlobalConfig | ProjectConfig
   /** Configuration file path */
   path: string
-  /** Configuration content */
-  config: ProjectConfig | GlobalConfig
+  /** Configuration source type */
+  source: 'global' | 'project'
 }

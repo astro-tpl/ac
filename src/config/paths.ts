@@ -2,10 +2,13 @@
  * Path utility functions
  */
 
-import { homedir } from 'node:os'
-import { resolve, dirname, join, isAbsolute } from 'node:path'
-import { PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR } from './constants'
-import { t } from '../i18n'
+import {homedir} from 'node:os'
+import {
+  dirname, isAbsolute, join, resolve,
+} from 'node:path'
+
+import {t} from '../i18n'
+import {PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR} from './constants'
 
 /**
  * Expand ~ symbol in path
@@ -14,6 +17,7 @@ export function expandTilde(filepath: string): string {
   if (filepath.startsWith('~/')) {
     return join(homedir(), filepath.slice(2))
   }
+
   return filepath
 }
 
@@ -25,6 +29,7 @@ export function normalizePath(filepath: string, basePath?: string): string {
   if (isAbsolute(expanded)) {
     return resolve(expanded)
   }
+
   return resolve(basePath || process.cwd(), expanded)
 }
 
@@ -42,8 +47,9 @@ export function inferRepoAlias(gitUrl: string): string {
   // Extract last path segment and remove .git suffix
   const match = gitUrl.match(/\/([^/]+?)(?:\.git)?$/i)
   if (!match) {
-    throw new Error(t('error.git.invalid_url', { url: gitUrl }))
+    throw new Error(t('error.git.invalid_url', {url: gitUrl}))
   }
+
   return match[1]
 }
 
@@ -52,12 +58,12 @@ export function inferRepoAlias(gitUrl: string): string {
  * @param startDir Directory to start searching from
  * @returns Configuration file path, or null if not found
  */
-export async function findProjectConfig(startDir: string = process.cwd()): Promise<string | null> {
-  const { access } = await import('node:fs/promises')
-  
+export async function findProjectConfig(startDir: string = process.cwd()): Promise<null | string> {
+  const {access} = await import('node:fs/promises')
+
   let currentDir = resolve(startDir)
   const rootDir = resolve('/')
-  
+
   while (currentDir !== rootDir) {
     const configPath = join(currentDir, PROJECT_CONFIG_FILENAME)
     try {
@@ -66,15 +72,16 @@ export async function findProjectConfig(startDir: string = process.cwd()): Promi
     } catch {
       // File doesn't exist, continue searching upward
     }
-    
+
     const parentDir = dirname(currentDir)
     if (parentDir === currentDir) {
       // Reached filesystem root directory
       break
     }
+
     currentDir = parentDir
   }
-  
+
   return null
 }
 
@@ -82,9 +89,9 @@ export async function findProjectConfig(startDir: string = process.cwd()): Promi
  * Ensure directory exists (create recursively)
  */
 export async function ensureDir(dirPath: string): Promise<void> {
-  const { mkdir } = await import('node:fs/promises')
+  const {mkdir} = await import('node:fs/promises')
   try {
-    await mkdir(dirPath, { recursive: true })
+    await mkdir(dirPath, {recursive: true})
   } catch (error: any) {
     if (error.code !== 'EEXIST') {
       throw error
@@ -96,7 +103,7 @@ export async function ensureDir(dirPath: string): Promise<void> {
  * Check if file exists
  */
 export async function fileExists(filepath: string): Promise<boolean> {
-  const { access } = await import('node:fs/promises')
+  const {access} = await import('node:fs/promises')
   try {
     await access(filepath)
     return true
