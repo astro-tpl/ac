@@ -1,13 +1,14 @@
 /**
- * 版本兼容性校验工具
+ * Version compatibility check utility
  */
 
 import { CURRENT_CONFIG_VERSION } from '../config/constants'
 import { VersionIncompatibleError } from '../types/errors'
+import { t } from '../i18n'
 
 /**
- * 检查配置版本兼容性
- * 只校验大版本号（1.x.x 和 2.x.x 不兼容）
+ * Check configuration version compatibility
+ * Only check major version number (1.x.x and 2.x.x are incompatible)
  */
 export function checkVersionCompatibility(configVersion: number): void {
   const currentMajor = Math.floor(CURRENT_CONFIG_VERSION)
@@ -15,20 +16,20 @@ export function checkVersionCompatibility(configVersion: number): void {
   
   if (currentMajor !== configMajor) {
     throw new VersionIncompatibleError(
-      `配置版本 ${configVersion} 与当前工具版本 ${CURRENT_CONFIG_VERSION} 不兼容，请升级配置文件`
+      t('version.error.incompatible', { configVersion, currentVersion: CURRENT_CONFIG_VERSION })
     )
   }
 }
 
 /**
- * 检查配置版本是否有效
+ * Check if configuration version is valid
  */
 export function isValidVersion(version: unknown): version is number {
   return typeof version === 'number' && version > 0 && Number.isInteger(version)
 }
 
 /**
- * 获取版本兼容性信息
+ * Get version compatibility information
  */
 export function getVersionCompatibilityInfo(configVersion: number): {
   isCompatible: boolean
@@ -42,11 +43,11 @@ export function getVersionCompatibilityInfo(configVersion: number): {
   
   let message: string
   if (isCompatible) {
-    message = '版本兼容'
+    message = t('version.compatible')
   } else if (configMajor < currentMajor) {
-    message = '配置版本过低，需要升级'
+    message = t('version.config_too_low')
   } else {
-    message = '配置版本过高，需要升级 ac 工具'
+    message = t('version.config_too_high')
   }
   
   return {
@@ -58,24 +59,24 @@ export function getVersionCompatibilityInfo(configVersion: number): {
 }
 
 /**
- * 格式化版本号显示
+ * Format version number display
  */
 export function formatVersion(version: number): string {
   return `v${version}.x`
 }
 
 /**
- * 生成版本升级建议
+ * Generate version upgrade suggestion
  */
 export function getUpgradeSuggestion(configVersion: number): string {
   const currentMajor = Math.floor(CURRENT_CONFIG_VERSION)
   const configMajor = Math.floor(configVersion)
   
   if (configMajor < currentMajor) {
-    return `请使用 'ac init --force' 升级配置文件到 ${formatVersion(CURRENT_CONFIG_VERSION)}`
+    return t('version.suggestion.upgrade_config', { version: formatVersion(CURRENT_CONFIG_VERSION) })
   } else if (configMajor > currentMajor) {
-    return `请升级 ac 工具到 ${formatVersion(configVersion)} 或更高版本`
+    return t('version.suggestion.upgrade_tool', { version: formatVersion(configVersion) })
   }
   
-  return '版本兼容，无需升级'
+  return t('version.suggestion.compatible')
 }

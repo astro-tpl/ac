@@ -1,6 +1,6 @@
 /**
- * 模板服务测试
- * 测试模板加载、解析、验证等功能
+ * Template service tests
+ * Test template loading, parsing, validation and other functions
  */
 
 import type { RepoConfig } from '@/types/config'
@@ -13,7 +13,7 @@ import {
 } from '@/types/errors'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
-// Mock 文件系统和配置服务
+// Mock file system and configuration service
 vi.mock('@/infra/fs', () => ({
   fileExists: vi.fn(),
   scanDirectory: vi.fn(),
@@ -47,24 +47,24 @@ import { getRepoPath } from '@/config/paths'
 import { fileExists, scanDirectory } from '@/infra/fs'
 import { readYamlFile } from '@/infra/yaml'
 
-// 测试用的模板数据
+// Test template data
 const mockPromptTemplate: PromptTemplate = {
-  content: '你是一个前端专家，请评审以下代码',
+  content: 'You are a frontend expert, please review the following code',
   id: 'frontend-review-v1',
   labels: ['frontend', 'review', 'react'],
-  name: '前端代码评审',
-  summary: 'React 前端代码评审提示词',
+  name: 'Frontend Code Review',
+  summary: 'React frontend code review prompt',
   type: 'prompt',
 }
 
 const mockContextTemplate: ContextTemplate = {
   id: 'cursor-rules-v1',
   labels: ['frontend', 'rules', 'cursor'],
-  name: 'Cursor 基础规则',
-  summary: '前端项目的 Cursor 规则配置',
+  name: 'Cursor Basic Rules',
+  summary: 'Cursor rules configuration for frontend projects',
   targets: [
     {
-      content: '# Cursor 规则\n- 禁止直接导入 services',
+      content: '# Cursor Rules\n- Prohibit direct import of services',
       mode: 'write',
       path: '.cursor/rules.md',
     },
@@ -92,9 +92,9 @@ describe('TemplateService', () => {
     vi.clearAllMocks()
   })
 
-  describe('模板加载功能', () => {
-    test('成功加载 Prompt 模板', async () => {
-      // Mock 配置服务
+  describe('Template loading functionality', () => {
+    test('Successfully load Prompt template', async () => {
+      // Mock configuration service
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -103,7 +103,7 @@ describe('TemplateService', () => {
         source: 'project',
       })
 
-      // Mock 文件系统
+      // Mock file system
       vi.mocked(getRepoPath).mockReturnValue('/test/templates')
       vi.mocked(fileExists).mockResolvedValue(true)
       vi.mocked(scanDirectory).mockResolvedValue(['/test/templates/prompt.yaml'])
@@ -120,7 +120,7 @@ describe('TemplateService', () => {
       })
     })
 
-    test('成功加载 Context 模板', async () => {
+    test('Successfully load Context template', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -139,7 +139,7 @@ describe('TemplateService', () => {
       expect(result).toEqual(mockContextTemplate)
     })
 
-    test('指定仓库加载模板', async () => {
+    test('Load template from specified repository', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -160,7 +160,7 @@ describe('TemplateService', () => {
       expect(result).toEqual(mockPromptTemplate)
     })
 
-    test('模板不存在时抛出错误', async () => {
+    test('Throw error when template does not exist', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -182,7 +182,7 @@ describe('TemplateService', () => {
       ).rejects.toThrow(TemplateNotFoundError)
     })
 
-    test('指定的仓库不存在时抛出错误', async () => {
+    test('Throw error when specified repository does not exist', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [mockRepoConfig],
@@ -198,7 +198,7 @@ describe('TemplateService', () => {
       ).rejects.toThrow(RepoNotFoundError)
     })
 
-    test('没有配置仓库时抛出错误', async () => {
+    test('Throw error when no repositories are configured', async () => {
       vi.mocked(configService.resolveConfig).mockResolvedValue({
         config: {
           repos: [],

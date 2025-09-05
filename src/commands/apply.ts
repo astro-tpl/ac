@@ -1,5 +1,5 @@
 /**
- * Apply 命令 - 将模板应用到项目文件
+ * Apply command - Apply templates to project files
  */
 
 import { Flags } from '@oclif/core'
@@ -73,12 +73,12 @@ export default class Apply extends BaseCommand {
     const { flags } = await this.parse(Apply)
     
     try {
-      // 检查是否有重复 ID 需要处理
+      // Check if there are duplicate IDs that need handling
       const templateId = flags.context || flags.prompt
       if (templateId && !flags.repo) {
         const resolvedOptions = await this.resolveTemplateOptions(templateId, flags)
         if (resolvedOptions) {
-          // 使用解析后的选项
+          // Use parsed options
           const result = await applyService.applyTemplate({
             ...resolvedOptions,
             content: flags.content,
@@ -97,7 +97,7 @@ export default class Apply extends BaseCommand {
         }
       }
 
-      // 原有逻辑
+      // Original logic
       const result = await applyService.applyTemplate({
         context: flags.context,
         prompt: flags.prompt,
@@ -122,11 +122,11 @@ export default class Apply extends BaseCommand {
   }
 
   /**
-   * 解析模板选项，处理重复 ID
+   * Parse template options, handle duplicate IDs
    */
   private async resolveTemplateOptions(templateId: string, flags: any): Promise<any | null> {
     try {
-      // 获取配置
+      // Get configuration
       const resolvedConfig = await configService.resolveConfig({ 
         forceGlobal: flags.global 
       })
@@ -137,23 +137,23 @@ export default class Apply extends BaseCommand {
         return null
       }
       
-      // 查找所有匹配的模板
+      // Find all matching templates
       const templates = await this.findAllTemplates(templateId, repos)
       
       if (templates.length === 0) {
         return null
       }
       
-      // 如果只有一个模板，直接使用
+      // If only one template, use directly
       if (templates.length === 1) {
-        return null // 让原有逻辑处理
+        return null // Let original logic handle
       }
       
-      // 处理重复ID的情况
+      // Handle duplicate ID cases
       const selectedTemplate = await this.selectTemplateForApply(templates, templateId)
       const repoName = (selectedTemplate as any).repoName
       
-      // 返回带有仓库信息的选项
+      // Return options with repository information
       if (flags.context) {
         return { context: templateId, repo: repoName }
       } else if (flags.prompt) {
@@ -162,23 +162,23 @@ export default class Apply extends BaseCommand {
       
       return null
     } catch (error) {
-      // 如果出错，让原有逻辑处理
+      // If error occurs, let original logic handle
       return null
     }
   }
 
   /**
-   * 查找所有匹配的模板
+   * Find all matching templates
    */
   private async findAllTemplates(id: string, repos: any[]): Promise<Template[]> {
     try {
-      // 使用搜索服务查找精确匹配的模板
+      // Use search service to find exactly matching templates
       const results = await searchService.searchTemplates({
         keyword: id,
         forceGlobal: false
       })
       
-      // 过滤出精确匹配的模板
+      // Filter out exactly matching templates
       const exactMatches = results.filter(result => 
         result.template.id === id
       ).map(result => result.template as any)
@@ -190,13 +190,13 @@ export default class Apply extends BaseCommand {
   }
 
   /**
-   * 选择要应用的模板
+   * Select template to apply
    */
   private async selectTemplateForApply(templates: Template[], id: string): Promise<Template> {
     logger.info(t('apply.duplicate.title', { id, count: templates.length }))
     logger.plain('')
     
-    // 显示选择列表
+    // Show selection list
     const tableData = templates.map((template, index) => ({
       index: (index + 1).toString(),
       type: template.type === 'prompt' ? '📝 Prompt' : '📦 Context',
@@ -216,12 +216,12 @@ export default class Apply extends BaseCommand {
     logger.plain(table)
     logger.plain('')
     
-    // 交互式选择
+    // Interactive selection
     return this.promptUserSelectionForApply(templates)
   }
 
   /**
-   * 提示用户选择要应用的模板
+   * Prompt user to select template to apply
    */
   private async promptUserSelectionForApply(templates: Template[]): Promise<Template> {
     const readline = await import('node:readline')
@@ -257,7 +257,7 @@ export default class Apply extends BaseCommand {
   }
   
   /**
-   * 显示预览结果
+   * Show preview results
    */
   private displayDryRunResult(result: {
     results: Array<{
@@ -288,7 +288,7 @@ export default class Apply extends BaseCommand {
       
       logger.plain(renderKeyValue(details, { indent: 2 }))
       
-      // 显示 JSON 合并差异
+      // Show JSON merge differences
       if (item.jsonKeyDiff) {
         logger.plain(`  ${t('apply.preview.json_diff')}`)
         

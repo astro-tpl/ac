@@ -12,19 +12,19 @@ import { ApplyService } from '@/core/apply.service'
 import { normalizeKeyEvent, isNavigationKey, getActionKey } from './utils/keyboardMapping'
 
 interface SearchAppProps {
-  /** 初始搜索查询 */
+  /** Initial search query */
   initialQuery?: string
-  /** 搜索选项 */
+  /** Search options */
   searchOptions?: {
     type?: 'prompt' | 'context'
     labels?: string[]
     repo?: string
   }
-  /** UI 主题 */
+  /** UI theme */
   theme?: UITheme
-  /** 应用完成回调 */
+  /** Apply complete callback */
   onApplyComplete?: (success: boolean, error?: string) => void
-  /** 退出回调 */
+  /** Exit callback */
   onExit?: () => void
 }
 
@@ -85,14 +85,14 @@ export function SearchApp({
   // Apply service
   const [applyService] = useState(() => new ApplyService())
 
-  // 回到搜索状态的函数
+  // Function to return to search state
   const backToSearch = useCallback(() => {
     setAppState('search')
     setSelectedTemplate(null)
     setShowFullContent(false)
   }, [])
 
-  // 切换全内容显示的函数
+  // Function to toggle full content display
   const toggleFullContent = useCallback(() => {
     setShowFullContent(prev => !prev)
   }, [])
@@ -114,10 +114,10 @@ export function SearchApp({
       if (initialQuery) {
         search(initialQuery)
       } else {
-        // 如果没有初始查询，显示所有模板
+        // If no initial query, show all templates
         search('')
       }
-    }, 10) // 很短的延迟确保过滤器先设置
+    }, 10) // Very short delay to ensure filters are set first
     
     return () => clearTimeout(timer)
   }, [initialQuery]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -165,7 +165,7 @@ export function SearchApp({
   useInput((input: string, key: any) => {
     const normalizedKey = normalizeKeyEvent(input, key)
     
-    // 全局快捷键处理
+    // Global shortcut key handling
     const actionKey = getActionKey(normalizedKey)
     
     if (actionKey === 'quit') {
@@ -188,10 +188,10 @@ export function SearchApp({
       return
     }
 
-    // 状态特定的快捷键处理
+    // State-specific shortcut key handling
     switch (appState) {
       case 'search':
-        // 导航处理
+        // Navigation handling
         const navDirection = isNavigationKey(normalizedKey)
         if (navDirection === 'up') {
           navigateUp()
@@ -218,7 +218,7 @@ export function SearchApp({
         break
 
       case 'detail':
-        // 详情页使用简化的单字母快捷键
+        // Detail page uses simplified single-letter shortcuts
         if (input === 'f') {
           toggleFullContent()
         } else if (input === 'y' && selectedTemplate) {
@@ -230,7 +230,7 @@ export function SearchApp({
 
       case 'apply':
         if (normalizedKey.isSpecial && normalizedKey.specialKey === 'enter' && currentApplyStep === 'confirm' && applyConfirmFn) {
-          // 在确认步骤按下 enter，触发确认
+          // Press enter in confirm step, trigger confirmation
           applyConfirmFn()
         }
         break

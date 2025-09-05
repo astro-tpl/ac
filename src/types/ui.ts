@@ -1,32 +1,32 @@
 /**
- * UI 相关类型定义
+ * UI related type definitions
  */
 
 import { SearchResult, IndexedTemplate } from './template'
 
-// 搜索状态
+// Search state
 export interface SearchState {
-  /** 搜索关键词 */
+  /** Search keywords */
   query: string
-  /** 搜索结果 */
+  /** Search results */
   results: SearchResult[]
-  /** 当前选中的结果索引 */
+  /** Currently selected result index */
   selectedIndex: number
-  /** 是否正在加载 */
+  /** Whether loading */
   isLoading: boolean
-  /** 搜索错误信息 */
+  /** Search error message */
   error?: string
-  /** 是否显示详情 */
+  /** Whether to show details */
   showDetail: boolean
-  /** 当前查看详情的模板 */
+  /** Currently viewing detail template */
   detailTemplate?: IndexedTemplate
-  /** 搜索过滤器 */
+  /** Search filters */
   filters: {
     type?: 'prompt' | 'context'
     labels: string[]
     repo?: string
   }
-  /** 搜索统计信息 */
+  /** Search statistics */
   stats: {
     totalResults: number
     searchTime: number
@@ -34,7 +34,7 @@ export interface SearchState {
   }
 }
 
-// 键盘动作类型
+// Keyboard action types
 export type KeyboardAction = 
   | 'move-up'
   | 'move-down'
@@ -46,66 +46,66 @@ export type KeyboardAction =
   | 'clear-input'
   | 'back'
 
-// 应用模式
+// Application modes
 export type ApplyMode = 'write' | 'append' | 'merge'
 
-// 应用状态
+// Application state
 export interface ApplyState {
-  /** 是否显示应用确认界面 */
+  /** Whether to show application confirmation interface */
   showApplyConfirm: boolean
-  /** 要应用的模板 */
+  /** Template to apply */
   templateToApply?: IndexedTemplate
-  /** 目标路径 */
+  /** Target path */
   targetPath?: string
-  /** 应用模式 */
+  /** Application mode */
   mode: ApplyMode
-  /** 是否正在应用 */
+  /** Whether currently applying */
   isApplying: boolean
-  /** 应用错误信息 */
+  /** Application error message */
   error?: string
 }
 
-// 应用结果
+// Application result
 export interface ApplyResult {
-  /** 是否成功 */
+  /** Whether successful */
   success: boolean
-  /** 错误信息 */
+  /** Error message */
   error?: string
-  /** 受影响的文件列表 */
+  /** List of affected files */
   affectedFiles: string[]
 }
 
-// 搜索选项
+// Search options
 export interface SearchOptions {
-  /** 模板类型过滤 */
+  /** Template type filter */
   type?: 'prompt' | 'context'
-  /** 标签过滤 */
+  /** Label filter */
   labels?: string[]
-  /** 仓库过滤 */
+  /** Repository filter */
   repo?: string
-  /** 最大结果数 */
+  /** Maximum number of results */
   maxResults?: number
 }
 
-// UI 主题配置
+// UI theme configuration
 export interface UITheme {
-  /** 主色调 */
+  /** Primary color */
   primary: string
-  /** 选中项背景色 */
+  /** Selected item background color */
   selectedBg: string
-  /** 选中项前景色 */
+  /** Selected item foreground color */
   selectedFg: string
-  /** 错误色 */
+  /** Error color */
   error: string
-  /** 成功色 */
+  /** Success color */
   success: string
-  /** 警告色 */
+  /** Warning color */
   warning: string
-  /** 次要文本色 */
+  /** Secondary text color */
   secondary: string
 }
 
-// 默认主题
+// Default theme
 export const DEFAULT_THEME: UITheme = {
   primary: '#0066cc',
   selectedBg: '#0066cc',
@@ -116,7 +116,7 @@ export const DEFAULT_THEME: UITheme = {
   secondary: '#666666'
 }
 
-// 快捷键配置
+// Key bindings configuration
 export interface KeyBindings {
   moveUp: string
   moveDown: string
@@ -130,7 +130,7 @@ export interface KeyBindings {
   back: string
 }
 
-// 默认快捷键
+// Default key bindings
 export const DEFAULT_KEY_BINDINGS: KeyBindings = {
   moveUp: 'k',
   moveDown: 'j',
@@ -144,19 +144,19 @@ export const DEFAULT_KEY_BINDINGS: KeyBindings = {
   back: 'escape'
 }
 
-// 搜索配置
+// Search configuration
 export interface SearchConfig {
-  /** 防抖延迟（毫秒） */
+  /** Debounce delay (milliseconds) */
   debounceMs: number
-  /** 最大显示结果数 */
+  /** Maximum display results */
   maxDisplayResults: number
-  /** 是否启用拼音搜索 */
+  /** Whether to enable pinyin search */
   enablePinyin: boolean
-  /** 搜索阈值 */
+  /** Search threshold */
   threshold: number
-  /** 最大结果数 */
+  /** Maximum results */
   maxResults: number
-  /** 搜索权重配置 */
+  /** Search weight configuration */
   searchWeights: {
     id: number
     name: number
@@ -166,7 +166,7 @@ export interface SearchConfig {
   }
 }
 
-// 默认搜索配置
+// Default search configuration
 export const DEFAULT_SEARCH_CONFIG: SearchConfig = {
   debounceMs: 0,
   maxDisplayResults: 10,

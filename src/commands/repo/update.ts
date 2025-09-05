@@ -53,7 +53,7 @@ export default class RepoUpdate extends BaseCommand {
       
       logger.success(t('repo.update.success', { success: successCount, total: totalCount }))
       
-      // 显示详细结果
+      // Show detailed results
       for (const item of updated) {
         if (item.success) {
           logger.info(t('repo.update.success_item', { name: item.name }))

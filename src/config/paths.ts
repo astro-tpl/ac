@@ -1,5 +1,5 @@
 /**
- * 路径工具函数
+ * Path utility functions
  */
 
 import { homedir } from 'node:os'
@@ -8,7 +8,7 @@ import { PROJECT_CONFIG_FILENAME, REPOS_CACHE_DIR } from './constants'
 import { t } from '../i18n'
 
 /**
- * 展开路径中的 ~ 符号
+ * Expand ~ symbol in path
  */
 export function expandTilde(filepath: string): string {
   if (filepath.startsWith('~/')) {
@@ -18,7 +18,7 @@ export function expandTilde(filepath: string): string {
 }
 
 /**
- * 规范化路径（展开 ~ 并转为绝对路径）
+ * Normalize path (expand ~ and convert to absolute path)
  */
 export function normalizePath(filepath: string, basePath?: string): string {
   const expanded = expandTilde(filepath)
@@ -29,17 +29,17 @@ export function normalizePath(filepath: string, basePath?: string): string {
 }
 
 /**
- * 获取仓库本地缓存路径
+ * Get repository local cache path
  */
 export function getRepoPath(alias: string): string {
   return join(REPOS_CACHE_DIR, alias)
 }
 
 /**
- * 从 git URL 推断仓库别名
+ * Infer repository alias from git URL
  */
 export function inferRepoAlias(gitUrl: string): string {
-  // 提取最后一个路径段并去掉 .git 后缀
+  // Extract last path segment and remove .git suffix
   const match = gitUrl.match(/\/([^/]+?)(?:\.git)?$/i)
   if (!match) {
     throw new Error(t('error.git.invalid_url', { url: gitUrl }))
@@ -48,9 +48,9 @@ export function inferRepoAlias(gitUrl: string): string {
 }
 
 /**
- * 逐级向上查找项目配置文件
- * @param startDir 开始查找的目录
- * @returns 配置文件路径，未找到则返回 null
+ * Search for project configuration file upward level by level
+ * @param startDir Directory to start searching from
+ * @returns Configuration file path, or null if not found
  */
 export async function findProjectConfig(startDir: string = process.cwd()): Promise<string | null> {
   const { access } = await import('node:fs/promises')
@@ -64,12 +64,12 @@ export async function findProjectConfig(startDir: string = process.cwd()): Promi
       await access(configPath)
       return configPath
     } catch {
-      // 文件不存在，继续向上查找
+      // File doesn't exist, continue searching upward
     }
     
     const parentDir = dirname(currentDir)
     if (parentDir === currentDir) {
-      // 已到达文件系统根目录
+      // Reached filesystem root directory
       break
     }
     currentDir = parentDir
@@ -79,7 +79,7 @@ export async function findProjectConfig(startDir: string = process.cwd()): Promi
 }
 
 /**
- * 确保目录存在（递归创建）
+ * Ensure directory exists (create recursively)
  */
 export async function ensureDir(dirPath: string): Promise<void> {
   const { mkdir } = await import('node:fs/promises')
@@ -93,7 +93,7 @@ export async function ensureDir(dirPath: string): Promise<void> {
 }
 
 /**
- * 检查文件是否存在
+ * Check if file exists
  */
 export async function fileExists(filepath: string): Promise<boolean> {
   const { access } = await import('node:fs/promises')

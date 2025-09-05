@@ -3,21 +3,21 @@ import { Text, useInput } from 'ink'
 import { normalizeKeyEvent, isControlChar } from './utils/keyboardMapping'
 
 interface FilteredTextInputProps {
-  /** 输入值 */
+  /** Input value */
   value: string
-  /** 值变化回调 */
+  /** Value change callback */
   onChange: (value: string) => void
-  /** 占位符 */
+  /** Placeholder */
   placeholder?: string
-  /** 是否聚焦 */
+  /** Whether to focus */
   focus?: boolean
-  /** 是否显示光标 */
+  /** Whether to show cursor */
   showCursor?: boolean
 }
 
 /**
- * 过滤快捷键的文本输入组件
- * 防止 Ctrl+J/K 等导航快捷键被当作正常输入
+ * Filtered text input component
+ * Prevents Ctrl+J/K and other navigation shortcuts from being treated as normal input
  */
 export function FilteredTextInput({
   value,
@@ -32,19 +32,19 @@ export function FilteredTextInput({
     setCursorOffset(value.length)
   }, [value])
 
-  // 删除光标前的一个单词（类似终端 Ctrl+W）
+  // Delete one word before cursor (similar to terminal Ctrl+W)
   const deleteWordBackward = useCallback(() => {
     if (cursorOffset === 0) return
 
     let newOffset = cursorOffset
     
-    // 标准的终端 Ctrl+W 行为:
-    // 1. 向前删除直到遇到空白字符或到达开头
+    // Standard terminal Ctrl+W behavior:
+    // 1. Delete forward until whitespace character or beginning
     while (newOffset > 0 && !/\s/.test(value[newOffset - 1])) {
       newOffset--
     }
     
-    // 2. 继续删除前面的空白字符
+    // 2. Continue deleting preceding whitespace characters
     while (newOffset > 0 && /\s/.test(value[newOffset - 1])) {
       newOffset--
     }
@@ -59,31 +59,31 @@ export function FilteredTextInput({
 
     const normalizedKey = normalizeKeyEvent(input, key)
 
-    // 处理 Ctrl+W 删除单词
+    // Handle Ctrl+W word deletion
     if (normalizedKey.isCtrl && normalizedKey.letter === 'w') {
       deleteWordBackward()
       return
     }
 
-    // 让父组件处理其他 Ctrl 组合键
+    // Let parent component handle other Ctrl key combinations
     if (normalizedKey.isCtrl) {
-      return // 让父组件处理这些键
+      return // Let parent component handle these keys
     }
 
-    // 让父组件处理导航键和功能键，但不包括编辑相关的键
+    // Let parent component handle navigation and function keys, but not editing keys
     if (normalizedKey.isSpecial) {
       const editingKeys = ['backspace', 'delete', 'left', 'right']
       if (!editingKeys.includes(normalizedKey.specialKey || '')) {
-        return // 让父组件处理非编辑键
+        return // Let parent component handle non-editing keys
       }
     }
 
-    // 过滤掉控制字符（包括 Ctrl+J 产生的 \n）
+    // Filter out control characters (including \n from Ctrl+J)
     if (isControlChar(input)) {
-      return // 忽略所有控制字符
+      return // Ignore all control characters
     }
 
-    // 处理退格键和删除键
+    // Handle backspace and delete keys
     if (key.backspace || key.delete) {
       if (cursorOffset > 0) {
         const newValue = value.slice(0, cursorOffset - 1) + value.slice(cursorOffset)
@@ -93,7 +93,7 @@ export function FilteredTextInput({
       return
     }
 
-    // 处理左右箭头键（仅移动光标）
+    // Handle left and right arrow keys (only move cursor)
     if (key.leftArrow) {
       setCursorOffset(Math.max(0, cursorOffset - 1))
       return
@@ -104,9 +104,9 @@ export function FilteredTextInput({
       return
     }
 
-    // 处理正常字符输入（包括中文多字符输入）
+    // Handle normal character input (including multi-byte Chinese input)
     if (input && input.length > 0 && !isControlChar(input)) {
-      // 检查是否包含可打印字符
+      // Check if contains printable characters
       const hasValidChars = Array.from(input).some(char => char.charCodeAt(0) >= 32)
       if (hasValidChars) {
         const newValue = value.slice(0, cursorOffset) + input + value.slice(cursorOffset)
@@ -116,7 +116,7 @@ export function FilteredTextInput({
     }
   }, { isActive: focus })
 
-  // 构建显示文本
+  // Build display text
   const displayValue = value || placeholder
   const cursor = showCursor && focus ? '█' : ''
   

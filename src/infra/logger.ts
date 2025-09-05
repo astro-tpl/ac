@@ -1,11 +1,11 @@
 /**
- * 日志和错误格式化工具 - 支持国际化
+ * Logging and error formatting utility - Supports internationalization
  */
 
 import { ACError } from '../types/errors'
 import { t } from '../i18n'
 
-// 日志级别
+// Log levels
 export enum LogLevel {
   ERROR = 0,
   WARN = 1,
@@ -13,7 +13,7 @@ export enum LogLevel {
   DEBUG = 3,
 }
 
-// 控制台颜色
+// Console colors
 const colors = {
   reset: '\x1b[0m',
   red: '\x1b[31m',
@@ -24,7 +24,7 @@ const colors = {
 } as const
 
 /**
- * 简单的日志器
+ * Simple logger
  */
 export class Logger {
   constructor(private level: LogLevel = LogLevel.INFO) {}
@@ -65,7 +65,7 @@ export class Logger {
 
   debug(message: string): void {
     if (this.level >= LogLevel.DEBUG) {
-      console.log(`${colors.gray}🔍 调试:${colors.reset} ${message}`)
+      console.log(`${colors.gray}🔍 DEBUG:${colors.reset} ${message}`)
     }
   }
 
@@ -74,18 +74,18 @@ export class Logger {
   }
 }
 
-// 全局日志器实例
+// Global logger instance
 export const logger = new Logger()
 
 /**
- * 设置日志级别
+ * Set log level
  */
 export function setLogLevel(level: LogLevel): void {
   logger['level'] = level
 }
 
 /**
- * 格式化错误信息
+ * Format error message
  */
 export function formatError(error: Error | ACError): string {
   if (error instanceof ACError) {
@@ -96,7 +96,7 @@ export function formatError(error: Error | ACError): string {
 }
 
 /**
- * 格式化文件大小
+ * Format file size
  */
 export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
@@ -112,7 +112,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * 格式化时间差
+ * Format time difference
  */
 export function formatTimeDiff(milliseconds: number): string {
   if (milliseconds < 1000) {
@@ -129,7 +129,7 @@ export function formatTimeDiff(milliseconds: number): string {
 }
 
 /**
- * 创建进度指示器
+ * Create progress indicator
  */
 export function createProgress(total: number): {
   update: (current: number, message?: string) => void
@@ -144,7 +144,7 @@ export function createProgress(total: number): {
       const empty = '░'.repeat(20 - Math.round(percentage / 5))
       const output = `[${bar}${empty}] ${percentage}% ${message}`
       
-      // 清除上一行
+      // Clear previous line
       if (lastLength > 0) {
         process.stdout.write('\r' + ' '.repeat(lastLength) + '\r')
       }

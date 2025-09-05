@@ -5,7 +5,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "AI Context CLI - 统一管理 AI 编程上下文与提示词的命令行工具",
+  "description": "AI Context CLI - A CLI tool for managing AI programming context and prompts",
   "keywords": [
     "oclif"
   ],
@@ -69,11 +69,7 @@
       "@oclif/plugin-update"
     ],
     "topicSeparator": " ",
-    "topics": {
-      "repo": {
-        "description": "管理模板仓库"
-      }
-    }
+    "topics": { }
   },
   "scripts": {
     "build": "tsc -b && tsc-alias --resolve-full-paths --resolve-full-extension .js && cp -r src/i18n/*.json dist/i18n/",

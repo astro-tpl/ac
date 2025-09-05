@@ -1,8 +1,9 @@
 /**
- * 错误类型定义
+ * Error type definitions
  */
+import { t } from '../i18n'
 
-// 基础错误类
+// Base error class
 export abstract class ACError extends Error {
   abstract code: string
   abstract suggestion?: string
@@ -13,68 +14,68 @@ export abstract class ACError extends Error {
   }
 
   format(): string {
-    let output = `❌ 错误: ${this.message}`
+    let output = `❌ ${t('common.error')}: ${this.message}`
     if (this.suggestion) {
-      output += `\n💡 建议: ${this.suggestion}`
+      output += `\n💡 ${t('common.suggestion')}: ${this.suggestion}`
     }
     if (this.code) {
-      output += `\n🔍 错误代码: ${this.code}`
+      output += `\n🔍 ${t('common.error_code')}: ${this.code}`
     }
     return output
   }
 }
 
-// 配置相关错误
+// Configuration related errors
 export class ConfigNotFoundError extends ACError {
   code = 'CONFIG_NOT_FOUND'
-  suggestion = '使用 `ac init` 创建项目配置文件'
+  suggestion = t('error.suggestion.use_ac_init')
 }
 
 export class ConfigValidationError extends ACError {
   code = 'CONFIG_VALIDATION_ERROR'
-  suggestion = '检查配置文件格式是否正确'
+  suggestion = t('error.suggestion.check_config_format')
 }
 
 export class VersionIncompatibleError extends ACError {
   code = 'VERSION_INCOMPATIBLE'
-  suggestion = '请升级配置文件版本或使用兼容的 ac 版本'
+  suggestion = t('error.suggestion.upgrade_config_version')
 }
 
-// 仓库相关错误
+// Repository related errors
 export class RepoNotFoundError extends ACError {
   code = 'REPO_NOT_FOUND'
-  suggestion = '使用 `ac repo add` 添加仓库或检查仓库别名是否正确'
+  suggestion = t('error.suggestion.repo_not_found')
 }
 
 export class GitOperationError extends ACError {
   code = 'GIT_OPERATION_ERROR'
-  suggestion = '检查网络连接和 Git 仓库访问权限'
+  suggestion = t('error.suggestion.git_operation_failed')
 }
 
-// 模板相关错误
+// Template related errors
 export class TemplateNotFoundError extends ACError {
   code = 'TEMPLATE_NOT_FOUND'
-  suggestion = '使用 `ac search` 查找可用的模板'
+  suggestion = t('error.suggestion.template_not_found')
 }
 
 export class TemplateValidationError extends ACError {
   code = 'TEMPLATE_VALIDATION_ERROR'
-  suggestion = '检查模板 YAML 文件格式是否正确'
+  suggestion = t('error.suggestion.template_validation_failed')
 }
 
-// 工具依赖错误
+// Tool dependency errors
 export class RipgrepNotFoundError extends ACError {
   code = 'RIPGREP_NOT_FOUND'
-  suggestion = '安装 ripgrep: https://github.com/BurntSushi/ripgrep#installation'
+  suggestion = t('error.suggestion.ripgrep_not_found')
 }
 
-// 文件操作错误
+// File operation errors
 export class FileOperationError extends ACError {
   code = 'FILE_OPERATION_ERROR'
-  suggestion = '检查文件路径和权限'
+  suggestion = t('error.suggestion.file_operation_failed')
 }
 
 export class MergeNotSupportedError extends ACError {
   code = 'MERGE_NOT_SUPPORTED'
-  suggestion = '合并模式仅支持 JSON 文件，请使用 write 或 append 模式'
+  suggestion = t('error.suggestion.merge_not_supported')
 }

@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react'
 import { Box, Text, Newline } from 'ink'
 import { IndexedTemplate } from '@/types/template'
 import { UITheme } from '@/types/ui'
+import { t } from '@/i18n'
 
 interface DetailViewProps {
-  /** 要显示的模板 */
+  /** Template to display */
   template: IndexedTemplate
-  /** UI 主题 */
+  /** UI theme */
   theme?: UITheme
-  /** 是否显示完整内容 */
+  /** Whether to show full content */
   showFullContent?: boolean
-  /** 内容预览最大行数 */
+  /** Maximum lines for content preview */
   maxContentLines?: number
 }
 
@@ -33,7 +34,7 @@ export function DetailView({
   const [templateContent, setTemplateContent] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  // 动态加载模板内容
+  // Dynamically load template content
   useEffect(() => {
     async function loadContent() {
       if (template.type === 'prompt' && template.absPath) {

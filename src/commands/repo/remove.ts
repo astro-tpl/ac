@@ -41,7 +41,7 @@ export default class RepoRemove extends BaseCommand {
     const { args, flags } = await this.parse(RepoRemove)
     
     try {
-      // 确认操作
+      // Confirm operation
       if (flags['remove-local']) {
         logger.warn(t('repo.remove.warning', { name: args.alias }))
         logger.warn(t('repo.remove.warning_irreversible'))

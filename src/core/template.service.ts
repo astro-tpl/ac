@@ -1,11 +1,12 @@
 /**
- * 模板服务 - 加载、解析和管理模板
+ * Template Service - Load, parse and manage templates
  */
 
 import { readYamlFile } from '../infra/yaml'
 import { fileExists, scanDirectory } from '../infra/fs'
 import { getRepoPath } from '../config/paths'
 import { configService } from './config.service'
+import { t } from '../i18n'
 import { 
   Template, 
   PromptTemplate, 
@@ -21,11 +22,11 @@ import {
 import { logger } from '../infra/logger'
 
 /**
- * 模板服务类
+ * Template Service Class
  */
 export class TemplateService {
   /**
-   * 根据 ID 加载模板
+   * Load template by ID
    */
   async loadTemplate(
     templateId: string, 
@@ -36,15 +37,15 @@ export class TemplateService {
   ): Promise<Template> {
     const { repoName, forceGlobal = false } = options
     
-    // 解析配置
+    // Parse configuration
     const resolvedConfig = await configService.resolveConfig({ forceGlobal })
     
-    // 确定搜索的仓库
+    // Determine repositories to search
     let repos: RepoConfig[]
     if (repoName) {
       const repo = resolvedConfig.config.repos.find(r => r.name === repoName)
       if (!repo) {
-        throw new RepoNotFoundError(`仓库不存在: ${repoName}`)
+        throw new RepoNotFoundError(t('template.error.repo_not_found', { name: repoName }))
       }
       repos = [repo]
     } else {
@@ -52,29 +53,29 @@ export class TemplateService {
     }
     
     if (repos.length === 0) {
-      throw new RepoNotFoundError('没有配置任何仓库')
+      throw new RepoNotFoundError(t('template.error.no_repos_configured'))
     }
     
-    // 在所有仓库中搜索模板
+    // Search template in all repositories
     for (const repo of repos) {
       try {
         const template = await this.findTemplateInRepo(templateId, repo)
         if (template) {
-          logger.debug(`找到模板 ${templateId} 在仓库 ${repo.name}`)
+          logger.debug(t('template.debug.found_template', { id: templateId, repo: repo.name }))
           return template
         }
       } catch (error: any) {
-        logger.debug(`在仓库 ${repo.name} 中搜索模板失败: ${error.message}`)
+        logger.debug(t('template.debug.search_failed', { repo: repo.name, error: error.message }))
       }
     }
     
     throw new TemplateNotFoundError(
-      `模板不存在: ${templateId}。使用 'ac search' 查找可用模板`
+      t('template.error.template_not_found', { id: templateId })
     )
   }
   
   /**
-   * 在指定仓库中查找模板
+   * Find template in specified repository
    */
   private async findTemplateInRepo(
     templateId: string, 
@@ -83,28 +84,28 @@ export class TemplateService {
     const repoPath = getRepoPath(repo.name)
     
     if (!await fileExists(repoPath)) {
-      throw new RepoNotFoundError(`仓库本地目录不存在: ${repoPath}`)
+      throw new RepoNotFoundError(t('template.error.repo_local_not_exists', { path: repoPath }))
     }
     
-    // 扫描所有 YAML 文件
+    // Scan all YAML files
     const yamlFiles = await scanDirectory(repoPath, {
       extensions: ['.yaml', '.yml'],
       recursive: true,
       includeHidden: false
     })
     
-    // 逐个检查文件
+    // Check files one by one
     for (const filePath of yamlFiles) {
       try {
         const template = await readYamlFile<Template>(filePath)
         
-        // 验证模板格式
+        // Validate template format
         if (this.isValidTemplate(template) && template.id === templateId) {
           return template
         }
       } catch (error: any) {
-        // 忽略无法解析的文件，继续搜索
-        logger.debug(`跳过无效模板文件: ${filePath}`)
+        // Ignore unparseable files, continue search
+        logger.debug(t('template.debug.skip_invalid_file', { file: filePath }))
       }
     }
     
@@ -112,7 +113,7 @@ export class TemplateService {
   }
   
   /**
-   * 加载多个模板
+   * Load multiple templates
    */
   async loadTemplates(
     templateIds: string[],
@@ -146,25 +147,25 @@ export class TemplateService {
   }
   
   /**
-   * 根据仓库加载所有模板
+   * Load all templates by repository
    */
   async loadAllTemplatesFromRepo(repoName: string): Promise<Template[]> {
     const resolvedConfig = await configService.resolveConfig()
     const repo = resolvedConfig.config.repos.find(r => r.name === repoName)
     
     if (!repo) {
-      throw new RepoNotFoundError(`仓库不存在: ${repoName}`)
+      throw new RepoNotFoundError(t('template.error.repo_not_found', { name: repoName }))
     }
     
     const repoPath = getRepoPath(repo.name)
     
     if (!await fileExists(repoPath)) {
-      throw new RepoNotFoundError(`仓库本地目录不存在: ${repoPath}`)
+      throw new RepoNotFoundError(t('template.error.repo_local_not_exists', { path: repoPath }))
     }
     
     const templates: Template[] = []
     
-    // 扫描所有 YAML 文件
+    // Scan all YAML files
     const yamlFiles = await scanDirectory(repoPath, {
       extensions: ['.yaml', '.yml'],
       recursive: true,
@@ -179,7 +180,7 @@ export class TemplateService {
           templates.push(template)
         }
       } catch (error: any) {
-        logger.debug(`跳过无效模板文件: ${filePath}`)
+        logger.debug(t('template.debug.skip_invalid_file', { file: filePath }))
       }
     }
     
@@ -187,7 +188,7 @@ export class TemplateService {
   }
   
   /**
-   * 验证模板格式
+   * Validate template format
    */
   private isValidTemplate(template: any): template is Template {
     try {
@@ -199,32 +200,32 @@ export class TemplateService {
   }
   
   /**
-   * 严格验证模板结构
+   * Strictly validate template structure
    */
   validateTemplateStructure(template: any): void {
-    // 检查基本字段
+    // Check basic fields
     if (!template || typeof template !== 'object') {
-      throw new TemplateValidationError('模板必须是一个对象')
+      throw new TemplateValidationError(t('template.validation.must_be_object'))
     }
     
     if (!template.id || typeof template.id !== 'string') {
-      throw new TemplateValidationError('模板缺少有效的 id 字段')
+      throw new TemplateValidationError(t('template.validation.missing_valid_id'))
     }
     
     if (!template.type || !['prompt', 'context'].includes(template.type)) {
-      throw new TemplateValidationError('模板 type 必须是 prompt 或 context')
+      throw new TemplateValidationError(t('template.validation.invalid_type'))
     }
     
     if (!template.name || typeof template.name !== 'string') {
-      throw new TemplateValidationError('模板缺少有效的 name 字段')
+      throw new TemplateValidationError(t('template.validation.missing_valid_name'))
     }
     
-    // 验证标签（可选）
+    // Validate labels (optional)
     if (template.labels && !Array.isArray(template.labels)) {
-      throw new TemplateValidationError('模板 labels 必须是数组')
+      throw new TemplateValidationError(t('template.validation.labels_must_be_array'))
     }
     
-    // 根据类型进行特定验证
+    // Perform type-specific validation
     if (template.type === 'prompt') {
       this.validatePromptTemplate(template)
     } else if (template.type === 'context') {
@@ -233,54 +234,54 @@ export class TemplateService {
   }
   
   /**
-   * 验证 Prompt 模板
+   * Validate Prompt template
    */
   private validatePromptTemplate(template: any): void {
     if (!template.content || typeof template.content !== 'string') {
-      throw new TemplateValidationError('Prompt 模板缺少有效的 content 字段')
+      throw new TemplateValidationError(t('template.validation.prompt_missing_content'))
     }
   }
   
   /**
-   * 验证 Context 模板
+   * Validate Context template
    */
   private validateContextTemplate(template: any): void {
     if (!template.targets || !Array.isArray(template.targets)) {
-      throw new TemplateValidationError('Context 模板缺少有效的 targets 字段')
+      throw new TemplateValidationError(t('template.validation.context_missing_targets'))
     }
     
     if (template.targets.length === 0) {
-      throw new TemplateValidationError('Context 模板至少需要一个 target')
+      throw new TemplateValidationError(t('template.validation.context_needs_one_target'))
     }
     
     for (let i = 0; i < template.targets.length; i++) {
       const target = template.targets[i]
       
       if (!target.path || typeof target.path !== 'string') {
-        throw new TemplateValidationError(`Target ${i + 1} 缺少有效的 path 字段`)
+        throw new TemplateValidationError(t('template.validation.target_missing_path', { index: i + 1 }))
       }
       
       if (target.mode && !['write', 'append', 'merge'].includes(target.mode)) {
-        throw new TemplateValidationError(`Target ${i + 1} 的 mode 必须是 write, append 或 merge`)
+        throw new TemplateValidationError(t('template.validation.target_invalid_mode', { index: i + 1 }))
       }
       
-      // 检查内容来源
+      // Check content source
       const hasContent = target.content && typeof target.content === 'string'
       const hasPromptRef = target.content_from_prompt && typeof target.content_from_prompt === 'string'
       
       if (!hasContent && !hasPromptRef) {
-        throw new TemplateValidationError(`Target ${i + 1} 必须提供 content 或 content_from_prompt`)
+        throw new TemplateValidationError(t('template.validation.target_missing_content_source', { index: i + 1 }))
       }
       
-      // 验证内容顺序
+      // Validate content order
       if (target.content_order && !['content-first', 'prompt-first'].includes(target.content_order)) {
-        throw new TemplateValidationError(`Target ${i + 1} 的 content_order 必须是 content-first 或 prompt-first`)
+        throw new TemplateValidationError(t('template.validation.target_invalid_content_order', { index: i + 1 }))
       }
     }
   }
   
   /**
-   * 获取模板摘要信息
+   * Get template summary information
    */
   getTemplateSummary(template: Template): {
     id: string
@@ -309,7 +310,7 @@ export class TemplateService {
   }
   
   /**
-   * 检查模板是否匹配标签
+   * Check if template matches labels
    */
   templateMatchesLabels(template: Template, labels: string[], matchAll = false): boolean {
     if (!labels.length) return true
@@ -326,7 +327,7 @@ export class TemplateService {
   }
   
   /**
-   * 按类型过滤模板
+   * Filter templates by type
    */
   filterTemplatesByType(templates: Template[], type?: 'prompt' | 'context'): Template[] {
     if (!type) return templates
@@ -334,5 +335,5 @@ export class TemplateService {
   }
 }
 
-// 全局模板服务实例
+// Global template service instance
 export const templateService = new TemplateService()

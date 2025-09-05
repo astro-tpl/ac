@@ -6,6 +6,7 @@ import { readYamlFile, writeYamlFile } from '../infra/yaml'
 import { fileExists, ensureDir } from '../infra/fs'
 import { findProjectConfig } from '../config/paths'
 import { checkVersionCompatibility } from '../infra/version-check'
+import { t } from '../i18n'
 import { 
   GLOBAL_CONFIG_PATH, 
   AC_HOME, 
@@ -24,14 +25,13 @@ import {
   RepoNotFoundError 
 } from '../types/errors'
 import { logger } from '../infra/logger'
-import { t } from '../i18n'
 
 /**
- * 配置服务类
+ * Configuration Service Class
  */
 export class ConfigService {
   /**
-   * 解析配置文件（按优先级查找）
+   * Parse configuration files (search by priority)
    */
   async resolveConfig(options: {
     forceGlobal?: boolean
@@ -39,7 +39,7 @@ export class ConfigService {
   } = {}): Promise<ResolvedConfig> {
     const { forceGlobal = false, startDir = process.cwd() } = options
     
-    // 如果强制使用全局配置，直接读取全局配置
+    // If forcing global config, directly read global configuration
     if (forceGlobal) {
       const globalConfig = await this.getGlobalConfig()
       return {
@@ -49,7 +49,7 @@ export class ConfigService {
       }
     }
     
-    // 首先尝试查找项目配置
+    // First try to find project configuration
     const projectConfigPath = await findProjectConfig(startDir)
     if (projectConfigPath) {
       try {
@@ -64,7 +64,7 @@ export class ConfigService {
       }
     }
     
-    // 回退到全局配置
+    // Fall back to global configuration
     const globalConfig = await this.getGlobalConfig()
     return {
       source: 'global' as const,
@@ -74,7 +74,7 @@ export class ConfigService {
   }
   
   /**
-   * 加载项目配置文件
+   * Load project configuration file
    */
   async loadProjectConfig(configPath: string): Promise<ProjectConfig> {
     if (!await fileExists(configPath)) {
@@ -87,7 +87,7 @@ export class ConfigService {
       const config = await readYamlFile<ProjectConfig>(configPath)
       this.validateConfig(config)
       
-      // 确保配置包含所有必需字段，提供默认值
+      // Ensure configuration contains all required fields, provide defaults
       const normalizedConfig: ProjectConfig = {
         ...config,
         defaults: {
@@ -105,7 +105,7 @@ export class ConfigService {
   }
   
   /**
-   * 获取全局配置（不存在则自动创建）
+   * Get global configuration (auto-create if not exists)
    */
   async getGlobalConfig(): Promise<GlobalConfig> {
     if (!await fileExists(GLOBAL_CONFIG_PATH)) {
@@ -117,7 +117,7 @@ export class ConfigService {
       const config = await readYamlFile<GlobalConfig>(GLOBAL_CONFIG_PATH)
       this.validateConfig(config)
       
-      // 确保配置包含所有必需字段，提供默认值
+      // Ensure configuration contains all required fields, provide defaults
       const normalizedConfig: GlobalConfig = {
         ...config,
         defaults: {
@@ -135,7 +135,7 @@ export class ConfigService {
   }
   
   /**
-   * 创建默认全局配置
+   * Create default global configuration
    */
   async createDefaultGlobalConfig(): Promise<void> {
     await ensureDir(AC_HOME)
@@ -144,18 +144,18 @@ export class ConfigService {
   }
   
   /**
-   * 验证配置格式
+   * Validate configuration format
    */
   private validateConfig(config: ProjectConfig | GlobalConfig): void {
-    // 检查必需字段
+    // Check required fields
     if (!config.version || !config.repos || !config.defaults) {
       throw new Error(t('config.invalid', { error: 'missing required fields: version, repos, defaults' }))
     }
     
-    // 检查版本兼容性
+    // Check version compatibility
     checkVersionCompatibility(config.version)
     
-    // 验证仓库配置
+    // Validate repository configuration
     if (!Array.isArray(config.repos)) {
       throw new Error(t('config.invalid', { error: 'repos must be an array' }))
     }
@@ -166,7 +166,7 @@ export class ConfigService {
       }
     }
     
-    // 验证默认配置
+    // Validate default configuration
     const { defaults } = config
     if (!defaults.mode || !['write', 'append', 'merge'].includes(defaults.mode)) {
       throw new Error(t('config.invalid', { error: 'defaults.mode must be write|append|merge' }))
@@ -174,7 +174,7 @@ export class ConfigService {
   }
   
   /**
-   * 保存配置到文件
+   * Save configuration to file
    */
   async saveConfig(
     configPath: string, 
@@ -192,7 +192,7 @@ export class ConfigService {
   }
   
   /**
-   * 添加仓库到配置
+   * Add repository to configuration
    */
   async addRepoToConfig(
     resolvedConfig: ResolvedConfig,
@@ -200,26 +200,26 @@ export class ConfigService {
   ): Promise<void> {
     const config = resolvedConfig.config
     
-    // 检查仓库是否已存在
+    // Check if repository already exists
     const existingRepo = config.repos.find(r => r.name === repo.name)
     if (existingRepo) {
       throw new ConfigValidationError(t('repo.add.exists', { name: repo.name }))
     }
     
-    // 添加仓库
+    // Add repository
     config.repos.push(repo)
     
-    // 如果是第一个仓库且没有设置默认仓库，则设为默认
+    // If first repository and no default repository set, set as default
     if (config.repos.length === 1 && !config.defaults.repo) {
       config.defaults.repo = repo.name
     }
     
-    // 保存配置
+    // Save configuration
     await this.saveConfig(resolvedConfig.path, config)
   }
   
   /**
-   * 从配置中移除仓库
+   * Remove repository from configuration
    */
   async removeRepoFromConfig(
     resolvedConfig: ResolvedConfig,
@@ -227,26 +227,26 @@ export class ConfigService {
   ): Promise<void> {
     const config = resolvedConfig.config
     
-    // 查找仓库
+    // Find repository
     const repoIndex = config.repos.findIndex(r => r.name === repoName)
     if (repoIndex === -1) {
       throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
-    // 移除仓库
+    // Remove repository
     config.repos.splice(repoIndex, 1)
     
-    // 如果移除的是默认仓库，清除默认设置或设为第一个仓库
+    // If removed default repository, clear default setting or set to first repository
     if (config.defaults.repo === repoName) {
       config.defaults.repo = config.repos.length > 0 ? config.repos[0].name : ''
     }
     
-    // 保存配置
+    // Save configuration
     await this.saveConfig(resolvedConfig.path, config)
   }
   
   /**
-   * 更新仓库配置
+   * Update repository configuration
    */
   async updateRepoInConfig(
     resolvedConfig: ResolvedConfig,
@@ -255,38 +255,38 @@ export class ConfigService {
   ): Promise<void> {
     const config = resolvedConfig.config
     
-    // 查找仓库
+    // Find repository
     const repo = config.repos.find(r => r.name === repoName)
     if (!repo) {
       throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
     }
     
-    // 更新仓库配置
+    // Update repository configuration
     Object.assign(repo, updates)
     
-    // 保存配置
+    // Save configuration
     await this.saveConfig(resolvedConfig.path, config)
   }
   
   /**
-   * 根据别名或默认设置解析仓库
+   * Resolve repository by alias or default setting
    */
   resolveRepo(
     config: ProjectConfig | GlobalConfig,
     repoAlias?: string
   ): RepoConfig {
-    // 如果指定了别名，直接查找
+    // If alias specified, search directly
     if (repoAlias) {
       const repo = config.repos.find(r => r.name === repoAlias)
       if (!repo) {
         throw new RepoNotFoundError(
-          `仓库不存在: ${repoAlias}。使用 'ac repo list' 查看可用仓库`
+          t('config.error.repo_not_found_use_list', { alias: repoAlias })
         )
       }
       return repo
     }
     
-    // 使用默认仓库
+    // Use default repository
     if (config.defaults.repo) {
       const repo = config.repos.find(r => r.name === config.defaults.repo)
       if (repo) {
@@ -294,7 +294,7 @@ export class ConfigService {
       }
     }
     
-    // 使用第一个仓库
+    // Use first repository
     if (config.repos.length > 0) {
       return config.repos[0]
     }
@@ -303,7 +303,7 @@ export class ConfigService {
   }
   
   /**
-   * 获取配置摘要信息
+   * Get configuration summary information
    */
   getConfigSummary(resolvedConfig: ResolvedConfig): {
     source: string
@@ -324,5 +324,5 @@ export class ConfigService {
   }
 }
 
-// 全局配置服务实例
+// Global configuration service instance
 export const configService = new ConfigService()

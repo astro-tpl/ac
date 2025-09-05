@@ -1,5 +1,5 @@
 /**
- * Repo 命令组入口
+ * Repo command group entry point
  */
 
 import { Command } from '@oclif/core'

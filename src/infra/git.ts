@@ -1,5 +1,5 @@
 /**
- * Git 操作封装
+ * Git operations wrapper
  */
 
 import { simpleGit, SimpleGit, CleanOptions } from 'simple-git'
@@ -9,7 +9,7 @@ import { logger } from './logger'
 import { t } from '../i18n'
 
 /**
- * Git 仓库操作类
+ * Git repository operations class
  */
 export class GitRepository {
   private git: SimpleGit
@@ -19,7 +19,7 @@ export class GitRepository {
   }
   
   /**
-   * 检查是否为有效的 Git 仓库
+   * Check if it's a valid Git repository
    */
   async isValidRepo(): Promise<boolean> {
     try {
@@ -31,7 +31,7 @@ export class GitRepository {
   }
   
   /**
-   * 获取当前分支名
+   * Get current branch name
    */
   async getCurrentBranch(): Promise<string> {
     try {
@@ -39,13 +39,13 @@ export class GitRepository {
       return status.current || 'main'
     } catch (error: any) {
       throw new GitOperationError(
-        `获取当前分支失败: ${this.repoPath} - ${error.message}`
+        t('error.git.get_branch_failed', { path: this.repoPath, error: error.message })
       )
     }
   }
   
   /**
-   * 拉取最新代码
+   * Pull latest code
    */
   async pull(branch: string = 'main'): Promise<void> {
     try {
@@ -60,7 +60,7 @@ export class GitRepository {
   }
   
   /**
-   * 获取最后一次提交信息
+   * Get latest commit information
    */
   async getLastCommit(): Promise<{
     hash: string
@@ -90,7 +90,7 @@ export class GitRepository {
   }
   
   /**
-   * 检查是否有未提交的更改
+   * Check if there are uncommitted changes
    */
   async hasUncommittedChanges(): Promise<boolean> {
     try {
@@ -98,13 +98,13 @@ export class GitRepository {
       return status.files.length > 0
     } catch (error: any) {
       throw new GitOperationError(
-        `检查仓库状态失败: ${this.repoPath} - ${error.message}`
+        t('error.git.check_status_failed', { path: this.repoPath, error: error.message })
       )
     }
   }
   
   /**
-   * 切换到指定分支
+   * Switch to specified branch
    */
   async checkout(branch: string): Promise<void> {
     try {
@@ -118,7 +118,7 @@ export class GitRepository {
   }
   
   /**
-   * 获取远程 URL
+   * Get remote URL
    */
   async getRemoteUrl(): Promise<string> {
     try {
@@ -139,7 +139,7 @@ export class GitRepository {
 }
 
 /**
- * 克隆 Git 仓库
+ * Clone Git repository
  */
 export async function cloneRepository(
   gitUrl: string, 
@@ -147,20 +147,20 @@ export async function cloneRepository(
   branch: string = 'main'
 ): Promise<GitRepository> {
   try {
-    // 如果目标目录已存在且是有效的 git 仓库，则直接返回
+    // If target directory exists and is a valid git repository, return directly
     if (await isDirectory(targetPath)) {
       const repo = new GitRepository(targetPath)
       if (await repo.isValidRepo()) {
         logger.debug(t('repo.list.status.normal'))
         return repo
       } else {
-        // 目录存在但不是有效的git仓库，删除它
+        // Directory exists but is not a valid git repository, delete it
         const fs = await import('node:fs/promises')
         await fs.rm(targetPath, { recursive: true, force: true })
       }
     }
     
-    // 确保目标目录的父目录存在
+    // Ensure parent directory of target directory exists
     const path = await import('node:path')
     const parentDir = path.dirname(targetPath)
     await ensureDir(parentDir)
@@ -179,7 +179,7 @@ export async function cloneRepository(
 }
 
 /**
- * 更新已存在的仓库
+ * Update existing repository
  */
 export async function updateRepository(
   repoPath: string, 
@@ -195,18 +195,18 @@ export async function updateRepository(
     throw new GitOperationError(t('repo.list.status.invalid'))
   }
   
-  // 切换到指定分支（如果不是当前分支）
+  // Switch to specified branch (if not current branch)
   const currentBranch = await repo.getCurrentBranch()
   if (currentBranch !== branch) {
     await repo.checkout(branch)
   }
   
-  // 拉取最新代码
+  // Pull latest code
   await repo.pull(branch)
 }
 
 /**
- * 获取仓库信息
+ * Get repository information
  */
 export async function getRepositoryInfo(repoPath: string): Promise<{
   isValid: boolean
@@ -251,27 +251,27 @@ export async function getRepositoryInfo(repoPath: string): Promise<{
 }
 
 /**
- * 验证 Git URL 格式
+ * Validate Git URL format
  */
 export function isValidGitUrl(url: string): boolean {
-  // 支持 https 和 ssh 格式
+  // Support https and ssh formats
   const httpsPattern = /^https:\/\/[^/]+\/[^/]+\/[^/]+\.git$/i
   const sshPattern = /^git@[^:]+:[^/]+\/[^/]+\.git$/i
-  const githubShortPattern = /^[^/]+\/[^/]+$/  // user/repo 格式
+  const githubShortPattern = /^[^/]+\/[^/]+$/  // user/repo format
   
   return httpsPattern.test(url) || sshPattern.test(url) || githubShortPattern.test(url)
 }
 
 /**
- * 规范化 Git URL（将简短格式转换为完整 URL）
+ * Normalize Git URL (convert short format to full URL)
  */
 export function normalizeGitUrl(url: string): string {
-  // 如果是 user/repo 格式，转换为 GitHub HTTPS URL
+  // If it's user/repo format, convert to GitHub HTTPS URL
   if (/^[^/]+\/[^/]+$/.test(url)) {
     return `https://github.com/${url}.git`
   }
   
-  // 确保以 .git 结尾
+  // Ensure it ends with .git
   if (!url.endsWith('.git')) {
     return `${url}.git`
   }

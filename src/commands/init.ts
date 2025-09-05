@@ -1,5 +1,5 @@
 /**
- * Init 命令 - 创建项目配置文件
+ * Init command - Create project configuration file
  */
 
 import { Flags } from '@oclif/core'
@@ -51,20 +51,20 @@ export default class Init extends BaseCommand {
     
     const configPath = join(process.cwd(), PROJECT_CONFIG_FILENAME)
     
-    // 检查配置文件是否已存在
+    // Check if configuration file already exists
     if (await fileExists(configPath) && !flags.force) {
       throw new ConfigValidationError(
         t('init.exists', { path: configPath })
       )
     }
     
-    // 创建基础配置
+    // Create basic configuration
     const config: ProjectConfig = {
       ...DEFAULT_CONFIG,
       repos: []
     }
     
-    // 如果提供了仓库 URL，添加到配置中
+    // If repository URL provided, add to configuration
     if (flags.repo) {
       if (!isValidGitUrl(flags.repo)) {
         throw new ConfigValidationError(

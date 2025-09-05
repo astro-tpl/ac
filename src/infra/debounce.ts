@@ -1,13 +1,13 @@
 /**
- * 防抖工具函数
- * 用于交互式搜索中的实时搜索防抖处理
+ * Debounce utility functions
+ * Used for real-time search debounce handling in interactive search
  */
 
 /**
- * 防抖函数 - 延迟执行函数调用，如果在延迟时间内再次调用则重新计时
- * @param func 要防抖的函数
- * @param delay 延迟时间（毫秒）
- * @returns 防抖后的函数
+ * Debounce function - Delay function execution, reset timer if called again within delay period
+ * @param func Function to debounce
+ * @param delay Delay time (milliseconds)
+ * @returns Debounced function
  */
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
@@ -16,12 +16,12 @@ export function debounce<T extends (...args: any[]) => any>(
   let timeoutId: NodeJS.Timeout | null = null
   
   return (...args: Parameters<T>) => {
-    // 清除之前的定时器
+    // Clear previous timer
     if (timeoutId) {
       clearTimeout(timeoutId)
     }
     
-    // 设置新的定时器
+    // Set new timer
     timeoutId = setTimeout(() => {
       func.apply(null, args)
       timeoutId = null
@@ -30,10 +30,10 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 /**
- * 创建一个可取消的防抖函数
- * @param func 要防抖的函数
- * @param delay 延迟时间（毫秒）
- * @returns 包含防抖函数和取消函数的对象
+ * Create a cancelable debounce function
+ * @param func Function to debounce
+ * @param delay Delay time (milliseconds)
+ * @returns Object containing debounced function and cancel function
  */
 export function createDebouncedFunction<T extends (...args: any[]) => any>(
   func: T,

@@ -1,29 +1,29 @@
 /**
- * 键盘映射工具 - 处理终端中的控制字符映射问题
+ * Keyboard mapping utility - Handle control character mapping issues in terminal
  * 
- * 在终端中，某些 Ctrl 组合键会被映射为特定的控制字符：
- * - Ctrl+J = LF (换行符, \n, 字符码10)
- * - Ctrl+K = VT (垂直制表符, \v, 字符码11) 
- * - Ctrl+C = ETX (中断, 字符码3)
- * - Ctrl+D = EOT (文件结束, 字符码4)
- * - 等等...
+ * In terminal, certain Ctrl key combinations are mapped to specific control characters:
+ * - Ctrl+J = LF (line feed, \n, character code 10)
+ * - Ctrl+K = VT (vertical tab, \v, character code 11) 
+ * - Ctrl+C = ETX (interrupt, character code 3)
+ * - Ctrl+D = EOT (end of transmission, character code 4)
+ * - etc...
  */
 
-// 控制字符到 Ctrl 组合键的映射
+// Control character to Ctrl key combination mapping
 const CONTROL_CHAR_MAP: Record<number, string> = {
   1: 'a',   // Ctrl+A = SOH
   2: 'b',   // Ctrl+B = STX
-  3: 'c',   // Ctrl+C = ETX (中断)
+  3: 'c',   // Ctrl+C = ETX (interrupt)
   4: 'd',   // Ctrl+D = EOT
   5: 'e',   // Ctrl+E = ENQ
   6: 'f',   // Ctrl+F = ACK
   7: 'g',   // Ctrl+G = BEL
-  8: 'h',   // Ctrl+H = BS (退格)
+  8: 'h',   // Ctrl+H = BS (backspace)
   9: 'i',   // Ctrl+I = TAB
-  10: 'j',  // Ctrl+J = LF (换行)
+  10: 'j',  // Ctrl+J = LF (line feed)
   11: 'k',  // Ctrl+K = VT
   12: 'l',  // Ctrl+L = FF
-  13: 'm',  // Ctrl+M = CR (回车)
+  13: 'm',  // Ctrl+M = CR (carriage return)
   14: 'n',  // Ctrl+N = SO
   15: 'o',  // Ctrl+O = SI
   16: 'p',  // Ctrl+P = DLE
@@ -40,7 +40,7 @@ const CONTROL_CHAR_MAP: Record<number, string> = {
 }
 
 /**
- * 检测输入是否为控制字符（Ctrl 组合键）
+ * Detect if input is a control character (Ctrl combination key)
  */
 export function isControlChar(input: string): boolean {
   if (!input || input.length !== 1) return false
@@ -49,7 +49,7 @@ export function isControlChar(input: string): boolean {
 }
 
 /**
- * 将控制字符转换为对应的字母
+ * Convert control character to corresponding letter
  */
 export function getControlCharLetter(input: string): string | null {
   if (!isControlChar(input)) return null
@@ -58,19 +58,19 @@ export function getControlCharLetter(input: string): string | null {
 }
 
 /**
- * 检测并标准化键盘输入
- * 返回标准化的键盘事件信息
+ * Detect and normalize keyboard input
+ * Return normalized keyboard event information
  */
 export interface NormalizedKeyEvent {
-  /** 原始输入字符 */
+  /** Raw input character */
   input: string
-  /** 是否为 Ctrl 组合键 */
+  /** Whether it's a Ctrl combination key */
   isCtrl: boolean
-  /** 对应的字母（如果是 Ctrl 组合键） */
+  /** Corresponding letter (if it's a Ctrl combination key) */
   letter?: string
-  /** 是否为特殊键 */
+  /** Whether it's a special key */
   isSpecial: boolean
-  /** 特殊键名称 */
+  /** Special key name */
   specialKey?: string
 }
 
@@ -81,7 +81,7 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
     isSpecial: false
   }
 
-  // 首先检查特殊键标志 - 这些优先级最高
+  // First check special key flags - these have highest priority
   if (key.upArrow) {
     result.isSpecial = true
     result.specialKey = 'up'
@@ -120,14 +120,14 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
     return result
   }
 
-  // 然后检查 key 对象中的 ctrl 标志
+  // Then check ctrl flag in key object
   if (key.ctrl && input && input.length === 1) {
     result.isCtrl = true
     result.letter = input.toLowerCase()
     return result
   }
 
-  // 最后检查是否为控制字符
+  // Finally check if it's a control character
   if (isControlChar(input)) {
     result.isCtrl = true
     result.letter = getControlCharLetter(input) || undefined
@@ -138,7 +138,7 @@ export function normalizeKeyEvent(input: string, key: any): NormalizedKeyEvent {
 }
 
 /**
- * 检查是否为导航键
+ * Check if it's a navigation key
  */
 export function isNavigationKey(normalizedEvent: NormalizedKeyEvent): 'up' | 'down' | null {
   if (normalizedEvent.isSpecial) {
@@ -155,7 +155,7 @@ export function isNavigationKey(normalizedEvent: NormalizedKeyEvent): 'up' | 'do
 }
 
 /**
- * 检查是否为动作键
+ * Check if it's an action key
  */
 export function getActionKey(normalizedEvent: NormalizedKeyEvent): string | null {
   if (normalizedEvent.isSpecial) {

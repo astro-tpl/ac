@@ -1,6 +1,6 @@
 import { t } from '../i18n'
 /**
- * 应用服务 - 模板插值、内容组装、文件写入
+ * Apply Service - Template interpolation, content assembly, file writing
  */
 
 import { join, dirname, isAbsolute } from 'node:path'
@@ -27,48 +27,48 @@ import {
 import { logger } from '../infra/logger'
 
 /**
- * 应用选项
+ * Apply options
  */
 export interface ApplyOptions {
-  /** Context 模板 ID */
+  /** Context template ID */
   context?: string
-  /** Prompt 模板 ID */
+  /** Prompt template ID */
   prompt?: string
-  /** 本地文件内容 */
+  /** Local file content */
   content?: string
-  /** 从标准输入读取 */
+  /** Read from standard input */
   stdin?: boolean
-  /** 目标目录或文件 */
+  /** Target directory or file */
   dest?: string
-  /** 文件名（当 dest 为目录时） */
+  /** Filename (when dest is a directory) */
   filename?: string
-  /** 写入模式 */
+  /** Write mode */
   mode?: 'write' | 'append' | 'merge'
-  /** 仓库别名 */
+  /** Repository alias */
   repo?: string
-  /** 强制使用全局配置 */
+  /** Force use global configuration */
   forceGlobal?: boolean
-  /** 预览模式 */
+  /** Preview mode */
   dryRun?: boolean
 }
 
 /**
- * 应用服务类
+ * Apply Service Class
  */
 export class ApplyService {
   /**
-   * 应用模板到项目文件
+   * Apply template to project files
    */
   async applyTemplate(options: ApplyOptions): Promise<DryRunResult | void> {
-    // 验证输入参数
+    // Validate input parameters
     this.validateOptions(options)
     
-    // 解析配置
+    // Parse configuration
     const resolvedConfig = await configService.resolveConfig({ 
       forceGlobal: options.forceGlobal 
     })
     
-    // 确定内容来源和应用逻辑
+    // Determine content source and apply logic
     if (options.context) {
       return this.applyContextTemplate(options, resolvedConfig)
     } else {
@@ -77,26 +77,26 @@ export class ApplyService {
   }
   
   /**
-   * 应用 Context 模板
+   * Apply Context template
    */
   private async applyContextTemplate(
     options: ApplyOptions, 
     resolvedConfig: any
   ): Promise<DryRunResult | void> {
-    // 加载 Context 模板
+    // Load Context template
     const template = await templateService.loadTemplate(options.context!, {
       repoName: options.repo,
       forceGlobal: options.forceGlobal
     })
     
     if (template.type !== 'context') {
-      throw new TemplateNotFoundError(`模板 ${options.context} 不是 Context 类型`)
+      throw new TemplateNotFoundError(t('apply.error.not_context_template', { id: options.context || '' }))
     }
     
     const contextTemplate = template as ContextTemplate
     const results: ApplyResult[] = []
     
-    // 处理每个目标
+    // Process each target
     for (const target of contextTemplate.targets) {
       const result = await this.processTarget(
         target,
@@ -113,13 +113,13 @@ export class ApplyService {
         totalFiles: results.length
       }
     } else {
-      // 实际写入文件
+      // Actually write files
       await this.writeTargets(results, contextTemplate)
     }
   }
   
   /**
-   * 应用直接内容（Prompt/Content/Stdin）
+   * Apply direct content (Prompt/Content/Stdin)
    */
   private async applyDirectContent(
     options: ApplyOptions,
@@ -128,7 +128,7 @@ export class ApplyService {
     let content = ''
     let contentSource = ''
     
-    // 确定内容来源
+    // Determine content source
     if (options.prompt) {
       const template = await templateService.loadTemplate(options.prompt, {
         repoName: options.repo,
@@ -136,7 +136,7 @@ export class ApplyService {
       })
       
       if (template.type !== 'prompt') {
-        throw new TemplateNotFoundError(`模板 ${options.prompt} 不是 Prompt 类型`)
+        throw new TemplateNotFoundError(t('apply.error.not_prompt_template', { id: options.prompt }))
       }
       
       content = (template as PromptTemplate).content
@@ -149,19 +149,19 @@ export class ApplyService {
       contentSource = 'stdin'
     }
     
-    // 确定目标路径
+    // Determine target path
     const targetPath = this.resolveTargetPath(
       options.dest || '.',
       options.filename
     )
     
-    // 创建应用结果
+    // Create apply result
     const result: ApplyResult = {
       targetPath,
       mode: options.mode || 'write',
       isNewFile: !await fileExists(targetPath),
       contentSummary: this.createContentSummary(content, contentSource),
-      content // 存储实际内容
+      content // Store actual content
     }
     
     if (options.dryRun) {
@@ -170,14 +170,14 @@ export class ApplyService {
         totalFiles: 1
       }
     } else {
-      // 实际写入文件
+      // Actually write files
       await this.writeContent(result.targetPath, result.content, result.mode)
       logger.success(t('common.done'))
     }
   }
   
   /**
-   * 处理单个目标
+   * Process single target
    */
   private async processTarget(
     target: TargetConfig,
@@ -185,28 +185,28 @@ export class ApplyService {
     options: ApplyOptions,
     resolvedConfig: any
   ): Promise<ApplyResult> {
-    // 插值处理路径
+    // Interpolate path
     const targetPath = this.interpolatePath(target.path, template, resolvedConfig)
     const absolutePath = this.resolveTargetPath(
       options.dest ? join(options.dest, targetPath) : targetPath
     )
     
-    // 组装内容
+    // Assemble content
     const content = await this.assembleTargetContent(target, template, options)
     
-    // 确定写入模式
+    // Determine write mode
     const mode = target.mode || options.mode || 'write'
     
-    // 创建结果
+    // Create result
     const result: ApplyResult = {
       targetPath: absolutePath,
       mode,
       isNewFile: !await fileExists(absolutePath),
       contentSummary: this.createContentSummary(content, `context:${template.id}`),
-      content // 存储实际内容
+      content // Store actual content
     }
     
-    // 如果是 merge 模式，分析 JSON 差异
+    // If merge mode, analyze JSON differences
     if (mode === 'merge' && isJsonFile(absolutePath)) {
       try {
         const preview = await previewJsonMerge(absolutePath, content)
@@ -225,7 +225,7 @@ export class ApplyService {
   }
   
   /**
-   * 组装目标内容
+   * Assemble target content
    */
   private async assembleTargetContent(
     target: TargetConfig,
@@ -235,12 +235,12 @@ export class ApplyService {
     let content = ''
     let promptContent = ''
     
-    // 获取直接内容
+    // Get direct content
     if (target.content) {
       content = this.interpolateContent(target.content, template)
     }
     
-    // 获取 Prompt 引用内容
+    // Get Prompt reference content
     if (target.content_from_prompt) {
       const promptTemplate = await templateService.loadTemplate(
         target.content_from_prompt,
@@ -252,14 +252,14 @@ export class ApplyService {
       
       if (promptTemplate.type !== 'prompt') {
         throw new TemplateNotFoundError(
-          `引用的模板 ${target.content_from_prompt} 不是 Prompt 类型`
+          t('apply.error.referenced_not_prompt_template', { id: target.content_from_prompt })
         )
       }
       
       promptContent = (promptTemplate as PromptTemplate).content
     }
     
-    // 按顺序组装内容
+    // Assemble content in order
     if (content && promptContent) {
       const order = target.content_order || 'content-first'
       return order === 'content-first' 
@@ -271,12 +271,12 @@ export class ApplyService {
   }
   
   /**
-   * 插值处理路径
+   * Interpolate path
    */
   private interpolatePath(path: string, template: Template, resolvedConfig: any): string {
-    // 获取模板来源仓库
+    // Get template source repository
     const repo = resolvedConfig.config.repos.find((r: any) => 
-      // 这里需要通过模板的来源仓库来确定，暂时使用第一个仓库
+      // Need to determine through template's source repository, temporarily use first repository
       true
     )
     
@@ -286,40 +286,40 @@ export class ApplyService {
   }
   
   /**
-   * 插值处理内容
+   * Interpolate content
    */
   private interpolateContent(content: string, template: Template): string {
-    // 这里可以扩展更多插值变量
-    return content.replace(/\${repo\.id}/g, 'unknown') // 简化实现
+    // More interpolation variables can be extended here
+    return content.replace(/\${repo\.id}/g, 'unknown') // Simplified implementation
   }
   
   /**
-   * 解析目标路径
+   * Parse target path
    */
   private resolveTargetPath(dest: string, filename?: string): string {
     const destPath = normalizePath(dest)
     
     if (filename) {
-      // dest 是目录，filename 是文件名
+      // dest is directory, filename is file name
       return join(destPath, filename)
     } else if (dest.includes('.') || isAbsolute(dest)) {
-      // dest 看起来像文件路径
+      // dest looks like file path
       return destPath
     } else {
-      // dest 是目录，需要 filename
+      // dest is directory, needs filename
       throw new FileOperationError(t('apply.merge.unsupported'))
     }
   }
   
   /**
-   * 写入所有目标文件
+   * Write all target files
    */
   private async writeTargets(results: ApplyResult[], template: ContextTemplate): Promise<void> {
     let successCount = 0
     
     for (const result of results) {
       try {
-        // 使用存储的实际内容
+        // Use stored actual content
         await this.writeContent(result.targetPath, result.content, result.mode)
         successCount++
         
@@ -333,14 +333,14 @@ export class ApplyService {
   }
   
   /**
-   * 写入内容到文件
+   * Write content to file
    */
   private async writeContent(
     filePath: string,
     content: string,
     mode: 'write' | 'append' | 'merge'
   ): Promise<void> {
-    // 确保目录存在
+    // Ensure directory exists
     const dir = dirname(filePath)
     const { ensureDir } = await import('../infra/fs')
     await ensureDir(dir)
@@ -361,19 +361,19 @@ export class ApplyService {
       case 'merge':
         if (!isJsonFile(filePath)) {
           throw new MergeNotSupportedError(
-            `文件 ${filePath} 不是 JSON 格式，无法使用 merge 模式`
+            t('apply.error.file_not_json_for_merge', { file: filePath })
           )
         }
         await mergeJsonFile(filePath, content)
         break
         
       default:
-        throw new FileOperationError(`不支持的写入模式: ${mode}`)
+        throw new FileOperationError(t('apply.error.unsupported_write_mode', { mode }))
     }
   }
   
   /**
-   * 从标准输入读取内容
+   * Read content from standard input
    */
   private async readFromStdin(): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -396,7 +396,7 @@ export class ApplyService {
   }
   
   /**
-   * 创建内容摘要
+   * Create content summary
    */
   private createContentSummary(content: string, source: string): string {
     const lines = content.split('\n').length
@@ -405,10 +405,10 @@ export class ApplyService {
   }
   
   /**
-   * 验证选项
+   * Validate options
    */
   private validateOptions(options: ApplyOptions): void {
-    // 检查内容来源
+    // Check content source
     const sources = [options.context, options.prompt, options.content, options.stdin]
       .filter(Boolean).length
     
@@ -420,12 +420,12 @@ export class ApplyService {
       throw new FileOperationError(t('error.command.not_found'))
     }
     
-    // 检查目标路径
+    // Check target path
     if (!options.dest && !options.context) {
       throw new FileOperationError(t('error.file.not_found', { path: '--dest' }))
     }
   }
 }
 
-// 全局应用服务实例
+// Global apply service instance
 export const applyService = new ApplyService()

@@ -1,56 +1,57 @@
 /**
- * 文件系统操作工具
+ * File system operation utility
  */
 
 import { promises as fs } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { FILE_ENCODING, TEMP_FILE_SUFFIX } from '../config/constants'
 import { FileOperationError } from '../types/errors'
+import { t } from '../i18n'
 
 /**
- * 原子写入文件（先写临时文件，再重命名）
+ * Atomic write file (write temp file first, then rename)
  */
 export async function atomicWriteFile(filepath: string, content: string): Promise<void> {
   const tempPath = filepath + TEMP_FILE_SUFFIX
   
   try {
-    // 确保目录存在
+    // Ensure directory exists
     await ensureDir(dirname(filepath))
     
-    // 写入临时文件
+    // Write temp file
     await fs.writeFile(tempPath, content, FILE_ENCODING)
     
-    // 原子性重命名
+    // Atomic rename
     await fs.rename(tempPath, filepath)
   } catch (error: any) {
-    // 清理临时文件
+    // Clean up temp file
     try {
       await fs.unlink(tempPath)
     } catch {
-      // 忽略清理错误
+      // Ignore cleanup errors
     }
     
     throw new FileOperationError(
-      `写入文件失败: ${filepath} - ${error.message}`
+      t('fs.error.write_failed', { file: filepath, error: error.message })
     )
   }
 }
 
 /**
- * 读取文件内容
+ * Read file content
  */
 export async function readFile(filepath: string): Promise<string> {
   try {
     return await fs.readFile(filepath, FILE_ENCODING)
   } catch (error: any) {
     throw new FileOperationError(
-      `读取文件失败: ${filepath} - ${error.message}`
+      t('fs.error.read_failed', { file: filepath, error: error.message })
     )
   }
 }
 
 /**
- * 确保目录存在（递归创建）
+ * Ensure directory exists (create recursively)
  */
 export async function ensureDir(dirPath: string): Promise<void> {
   try {
@@ -58,14 +59,14 @@ export async function ensureDir(dirPath: string): Promise<void> {
   } catch (error: any) {
     if (error.code !== 'EEXIST') {
       throw new FileOperationError(
-        `创建目录失败: ${dirPath} - ${error.message}`
+        t('fs.error.create_dir_failed', { dir: dirPath, error: error.message })
       )
     }
   }
 }
 
 /**
- * 检查文件是否存在
+ * Check if file exists
  */
 export async function fileExists(filepath: string): Promise<boolean> {
   try {
@@ -77,7 +78,7 @@ export async function fileExists(filepath: string): Promise<boolean> {
 }
 
 /**
- * 检查路径是否为目录
+ * Check if path is a directory
  */
 export async function isDirectory(path: string): Promise<boolean> {
   try {
@@ -89,7 +90,7 @@ export async function isDirectory(path: string): Promise<boolean> {
 }
 
 /**
- * 检查路径是否为文件
+ * Check if path is a file
  */
 export async function isFile(path: string): Promise<boolean> {
   try {
@@ -101,7 +102,7 @@ export async function isFile(path: string): Promise<boolean> {
 }
 
 /**
- * 获取文件状态信息
+ * Get file status information
  */
 export async function getFileStats(filepath: string): Promise<{
   size: number
@@ -123,7 +124,7 @@ export async function getFileStats(filepath: string): Promise<{
 }
 
 /**
- * 递归扫描目录中的文件
+ * Recursively scan files in directory
  */
 export async function scanDirectory(
   dirPath: string, 
@@ -142,7 +143,7 @@ export async function scanDirectory(
     for (const entry of entries) {
       const fullPath = join(dirPath, entry.name)
       
-      // 跳过隐藏文件（除非明确包含）
+      // Skip hidden files (unless explicitly included)
       if (!includeHidden && entry.name.startsWith('.')) {
         continue
       }
@@ -153,7 +154,7 @@ export async function scanDirectory(
           results.push(...subResults)
         }
       } else if (entry.isFile()) {
-        // 检查文件扩展名
+        // Check file extension
         if (!extensions || extensions.some(ext => entry.name.endsWith(ext))) {
           results.push(fullPath)
         }
@@ -163,13 +164,13 @@ export async function scanDirectory(
     return results.sort()
   } catch (error: any) {
     throw new FileOperationError(
-      `扫描目录失败: ${dirPath} - ${error.message}`
+      t('fs.error.scan_dir_failed', { dir: dirPath, error: error.message })
     )
   }
 }
 
 /**
- * 删除文件
+ * Delete file
  */
 export async function removeFile(filepath: string): Promise<void> {
   try {
@@ -177,27 +178,27 @@ export async function removeFile(filepath: string): Promise<void> {
   } catch (error: any) {
     if (error.code !== 'ENOENT') {
       throw new FileOperationError(
-        `删除文件失败: ${filepath} - ${error.message}`
+        t('fs.error.delete_file_failed', { file: filepath, error: error.message })
       )
     }
   }
 }
 
 /**
- * 递归删除目录
+ * Recursively delete directory
  */
 export async function removeDir(dirPath: string): Promise<void> {
   try {
     await fs.rm(dirPath, { recursive: true, force: true })
   } catch (error: any) {
     throw new FileOperationError(
-      `删除目录失败: ${dirPath} - ${error.message}`
+      t('fs.error.delete_dir_failed', { dir: dirPath, error: error.message })
     )
   }
 }
 
 /**
- * 复制文件
+ * Copy file
  */
 export async function copyFile(src: string, dest: string): Promise<void> {
   try {
@@ -205,7 +206,7 @@ export async function copyFile(src: string, dest: string): Promise<void> {
     await fs.copyFile(src, dest)
   } catch (error: any) {
     throw new FileOperationError(
-      `复制文件失败: ${src} -> ${dest} - ${error.message}`
+      t('fs.error.copy_file_failed', { src, dest, error: error.message })
     )
   }
 }

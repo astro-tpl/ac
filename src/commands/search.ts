@@ -72,13 +72,13 @@ export default class Search extends BaseCommand {
     const { args, flags } = await this.parse(Search)
     
     try {
-      // 如果只是查看统计信息
+      // If only viewing statistics
       if (flags.stats) {
         await this.showStats(flags.global)
         return
       }
 
-      // 如果没有关键词且启用交互式模式（或默认行为）
+      // If no keywords and interactive mode is enabled (or default behavior)
       if (!args.keyword && (flags.interactive || !flags['no-ui'])) {
         await this.startInteractiveSearch({
           type: flags.type as 'prompt' | 'context' | undefined,
@@ -88,7 +88,7 @@ export default class Search extends BaseCommand {
         return
       }
 
-      // 执行搜索
+      // Execute search
       const results = await searchService.searchTemplates({
         keyword: args.keyword || '',
         type: flags.type as 'prompt' | 'context' | undefined,
@@ -111,7 +111,7 @@ export default class Search extends BaseCommand {
         return
       }
       
-      // 交互式搜索
+      // Interactive search
       if (flags.interactive && !flags['no-ui']) {
         await this.startInteractiveSearch({
           initialQuery: args.keyword,
@@ -122,7 +122,7 @@ export default class Search extends BaseCommand {
         return
       }
       
-      // 默认使用表格格式显示搜索结果
+      // Default to table format for search results
       this.displayResultsAsTable(results)
       
     } catch (error: any) {
@@ -132,7 +132,7 @@ export default class Search extends BaseCommand {
   }
 
   /**
-   * 启动交互式搜索界面
+   * Start interactive search interface
    */
   private async startInteractiveSearch(options: {
     initialQuery?: string
@@ -174,7 +174,7 @@ export default class Search extends BaseCommand {
           })
         )
 
-        // 处理进程退出
+        // Handle process exit
         const cleanup = () => {
           if (!hasExited) {
             hasExited = true
@@ -186,7 +186,7 @@ export default class Search extends BaseCommand {
         process.on('SIGINT', cleanup)
         process.on('SIGTERM', cleanup)
         
-        // 清理监听器
+        // Clean up listeners
         process.once('exit', () => {
           process.removeListener('SIGINT', cleanup)
           process.removeListener('SIGTERM', cleanup)
@@ -197,7 +197,7 @@ export default class Search extends BaseCommand {
           hasExited = true
           logger.error(`Failed to start interactive search: ${error}`)
           logger.info('Falling back to table output mode.')
-          // 回退到表格模式
+          // Fall back to table mode
           try {
             const results = await searchService.searchTemplates({
               keyword: options.initialQuery || '',
@@ -217,7 +217,7 @@ export default class Search extends BaseCommand {
   }
   
   /**
-   * 显示搜索统计信息
+   * Show search statistics
    */
   private async showStats(forceGlobal: boolean): Promise<void> {
     try {
@@ -258,7 +258,7 @@ export default class Search extends BaseCommand {
   }
   
   /**
-   * 以表格形式显示搜索结果
+   * Display search results in table format
    */
   private displayResultsAsTable(results: Array<{
     score: number
@@ -275,11 +275,11 @@ export default class Search extends BaseCommand {
     logger.success(t('search.found', { count: results.length }))
     logger.plain('')
     
-    // 准备表格数据
+    // Prepare table data
     const tableData = [
-      // 表头
+      // Table header
       ['Type', 'ID', 'Name', 'Summary', 'Labels', 'Repository'],
-      // 数据行
+      // Data rows
       ...results.map(result => {
         const { template } = result
         const typeIcon = template.type === 'prompt' ? '📝' : '📦'
@@ -298,7 +298,7 @@ export default class Search extends BaseCommand {
       })
     ]
     
-    // 使用 table 包渲染表格
+    // Use table package to render table
     const output = table(tableData, {
       header: {
         alignment: 'center',
@@ -316,7 +316,7 @@ export default class Search extends BaseCommand {
     
     logger.plain(output)
     
-    // 显示使用提示
+    // Show usage tips
     if (results.length > 0) {
       const firstResult = results[0]
       logger.info(t('search.usage.title'))

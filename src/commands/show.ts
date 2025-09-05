@@ -1,6 +1,6 @@
 /**
- * Show 命令 - 显示模板内容
- * 根据规格文档第144-173行实现
+ * Show command - Display template content
+ * Implemented according to specification document lines 144-173
  */
 
 import { Args, Flags } from '@oclif/core'
@@ -53,14 +53,14 @@ export default class Show extends BaseCommand {
     const { args, flags } = await this.parse(Show)
     
     try {
-      // 获取配置
+      // Get configuration
       const resolvedConfig = await configService.resolveConfig({ 
         forceGlobal: flags.global 
       })
       
       let repos = resolvedConfig.config.repos
       
-      // 过滤仓库
+      // Filter repositories
       if (flags.repo) {
         repos = repos.filter(r => r.name === flags.repo)
         if (repos.length === 0) {
@@ -74,7 +74,7 @@ export default class Show extends BaseCommand {
         this.exit(1)
       }
       
-      // 查找模板
+      // Find template
       const templates = await this.findTemplates(args.id, repos)
       
       if (templates.length === 0) {
@@ -83,7 +83,7 @@ export default class Show extends BaseCommand {
         this.exit(1)
       }
       
-      // 处理重复ID的情况
+      // Handle duplicate ID cases
       let selectedTemplate: Template
       if (templates.length > 1) {
         selectedTemplate = await this.selectTemplate(templates, args.id)
@@ -91,7 +91,7 @@ export default class Show extends BaseCommand {
         selectedTemplate = templates[0]
       }
       
-      // 显示模板内容
+      // Display template content
       this.displayTemplate(selectedTemplate, flags.output)
       
     } catch (error: any) {
@@ -101,7 +101,7 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 查找匹配的模板
+   * Find matching templates
    */
   private async findTemplates(id: string, repos: any[]): Promise<Template[]> {
     const templates: Template[] = []
@@ -113,7 +113,7 @@ export default class Show extends BaseCommand {
         })
         templates.push(template)
       } catch (error) {
-        // 模板不存在，继续查找其他仓库
+        // Template doesn't exist, continue searching other repositories
         continue
       }
     }
@@ -122,13 +122,13 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 选择模板（处理重复ID）
+   * Select template (handle duplicate IDs)
    */
   private async selectTemplate(templates: Template[], id: string): Promise<Template> {
     logger.info(t('show.duplicate.title', { id }))
     logger.plain('')
     
-    // 显示选择列表
+    // Show selection list
     const tableData = templates.map((template, index) => ({
       index: (index + 1).toString(),
       type: template.type === 'prompt' ? '📝 Prompt' : '📦 Context',
@@ -148,12 +148,12 @@ export default class Show extends BaseCommand {
     logger.plain(table)
     logger.plain('')
     
-    // 交互式选择
+    // Interactive selection
     return this.promptUserSelection(templates)
   }
 
   /**
-   * 提示用户选择模板
+   * Prompt user to select template
    */
   private async promptUserSelection(templates: Template[]): Promise<Template> {
     const readline = await import('node:readline')
@@ -189,7 +189,7 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 显示模板内容
+   * Display template content
    */
   private displayTemplate(template: Template, outputPath?: string): void {
     if (outputPath) {
@@ -200,7 +200,7 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 显示指定属性
+   * Display specified attribute
    */
   private displayAttribute(template: Template, path: string): void {
     const value = this.getAttributeValue(template, path)
@@ -226,36 +226,36 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 显示完整模板
+   * Display complete template
    */
   private displayFullTemplate(template: Template): void {
-    // 显示基本信息
+    // Display basic information
     const basicInfo = {
       'ID': template.id,
-      '类型': template.type === 'prompt' ? 'Prompt' : 'Context',
-      '名称': template.name,
-      '标签': template.labels.length > 0 ? template.labels.join(', ') : '(无标签)',
-      '描述': template.summary || t('common.no_description')
+      [t('ui.detail.type')]: template.type === 'prompt' ? 'Prompt' : 'Context',
+      [t('ui.detail.name')]: template.name,
+      [t('ui.detail.labels')]: template.labels.length > 0 ? template.labels.join(', ') : t('ui.detail.no_labels'),
+      [t('ui.detail.summary')]: template.summary || t('common.no_description')
     }
     
     logger.plain(renderKeyValue(basicInfo))
     logger.plain('')
     
-    // 根据类型显示不同内容
+    // Display different content based on type
     if (template.type === 'prompt') {
       this.displayPromptContent(template as PromptTemplate)
     } else {
       this.displayContextContent(template as ContextTemplate)
     }
     
-    // 显示使用提示
+    // Display usage hint
     logger.plain('')
     logger.info(t('show.usage.title'))
     logger.plain(`  ${t('show.usage.apply', { type: template.type, id: template.id })}`)
   }
   
   /**
-   * 显示 Prompt 模板内容
+   * Display Prompt template content
    */
   private displayPromptContent(template: PromptTemplate): void {
     logger.info(t('show.content_label'))
@@ -265,7 +265,7 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 显示 Context 模板内容
+   * Display Context template content
    */
   private displayContextContent(template: ContextTemplate): void {
     logger.info(t('show.target_files', { count: template.targets.length }))
@@ -275,11 +275,11 @@ export default class Show extends BaseCommand {
       logger.plain(t('show.target_file_item', { index: index + 1, path: target.path }))
       
       const details = {
-        '模式': target.mode,
-        '内容来源': target.content_from_prompt 
-          ? `引用 Prompt: ${target.content_from_prompt}` 
-          : '直接内容',
-        '内容顺序': target.content_order || 'content-first'
+        [t('ui.detail.mode')]: target.mode,
+        [t('show.content_source')]: target.content_from_prompt 
+          ? t('show.content_from_prompt', { prompt: target.content_from_prompt }) 
+          : t('show.direct_content'),
+        [t('show.content_order')]: target.content_order || 'content-first'
       }
       
       logger.plain(renderKeyValue(details, { indent: 2 }))
@@ -297,7 +297,7 @@ export default class Show extends BaseCommand {
   }
   
   /**
-   * 获取属性值
+   * Get attribute value
    */
   private getAttributeValue(template: Template, path: string): any {
     const parts = path.split('.')

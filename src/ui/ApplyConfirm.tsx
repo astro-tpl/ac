@@ -3,25 +3,26 @@ import { Box, Text } from 'ink'
 import TextInput from 'ink-text-input'
 import { IndexedTemplate } from '@/types/template'
 import { UITheme, ApplyMode } from '@/types/ui'
+import { t } from '@/i18n'
 
 interface ApplyConfirmProps {
-  /** 要应用的模板 */
+  /** Template to apply */
   template: IndexedTemplate
-  /** 默认目标路径 */
+  /** Default target path */
   defaultPath?: string
-  /** 默认应用模式 */
+  /** Default apply mode */
   defaultMode?: ApplyMode
-  /** 确认回调 */
+  /** Confirm callback */
   onConfirm: (path: string, mode: ApplyMode) => void
-  /** 取消回调 */
+  /** Cancel callback */
   onCancel: () => void
-  /** UI 主题 */
+  /** UI theme */
   theme?: UITheme
-  /** 是否正在应用 */
+  /** Whether applying */
   isApplying?: boolean
-  /** 当前步骤变化回调 */
+  /** Current step change callback */
   onStepChange?: (step: InputStep) => void
-  /** 暴露确认函数的回调 */
+  /** Callback to expose confirm function */
   onExposeConfirm?: (confirmFn: () => void) => void
 }
 
@@ -53,12 +54,12 @@ export function ApplyConfirm({
   const [applyMode, setApplyMode] = useState<ApplyMode>(defaultMode)
   const [modeInput, setModeInput] = useState<string>(defaultMode)
 
-  // 通知步骤变化
+  // Notify step change
   useEffect(() => {
     onStepChange?.(currentStep)
   }, [currentStep, onStepChange])
 
-  // 暴露确认函数
+  // Expose confirm function
   useEffect(() => {
     if (currentStep === 'confirm') {
       const confirmFn = () => {
@@ -102,7 +103,7 @@ export function ApplyConfirm({
   }
 
   const handleModeSubmit = () => {
-    // 如果输入为空或与默认值相同，使用默认模式
+    // If input is empty or same as default, use default mode
     const inputMode = modeInput.trim()
     const mode = (inputMode || defaultMode).toLowerCase() as ApplyMode
     if (['write', 'append', 'merge'].includes(mode)) {

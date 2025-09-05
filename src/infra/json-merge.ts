@@ -1,46 +1,47 @@
 /**
- * JSON 浅合并工具
+ * JSON shallow merge utility
  */
 
 import { readFile, atomicWriteFile } from './fs'
 import { MergeNotSupportedError, FileOperationError } from '../types/errors'
 import { logger } from './logger'
+import { t } from '../i18n'
 
 /**
- * 检查文件是否为 JSON 格式
+ * Check if file is in JSON format
  */
 export function isJsonFile(filepath: string): boolean {
   return filepath.toLowerCase().endsWith('.json')
 }
 
 /**
- * 安全解析 JSON 字符串
+ * Safely parse JSON string
  */
 export function parseJsonSafely(content: string): any {
   try {
     return JSON.parse(content)
   } catch (error: any) {
     throw new FileOperationError(
-      `JSON 格式错误: ${error.message}`
+      t('json_merge.error.invalid_format', { error: error.message })
     )
   }
 }
 
 /**
- * 格式化 JSON 字符串
+ * Format JSON string
  */
 export function stringifyJson(data: any): string {
   return JSON.stringify(data, null, 2)
 }
 
 /**
- * 执行 JSON 对象的浅合并
- * 只合并第一层属性，深层嵌套对象会被完全替换
+ * Execute shallow merge of JSON objects
+ * Only merge first level properties, deeply nested objects will be completely replaced
  */
 export function mergeJsonObjects(target: any, source: any): any {
   if (!isPlainObject(target) || !isPlainObject(source)) {
     throw new MergeNotSupportedError(
-      'JSON 合并只支持普通对象（非数组、非 null、非基础类型）'
+      t('json_merge.error.only_plain_objects')
     )
   }
   
@@ -54,7 +55,7 @@ export function mergeJsonObjects(target: any, source: any): any {
 }
 
 /**
- * 检查是否为普通对象（非数组、非 null）
+ * Check if it's a plain object (not array, not null)
  */
 function isPlainObject(obj: any): boolean {
   return obj !== null && 
@@ -64,7 +65,7 @@ function isPlainObject(obj: any): boolean {
 }
 
 /**
- * 分析合并差异
+ * Analyze merge differences
  */
 export function analyzeJsonMergeDiff(target: any, source: any): {
   added: string[]
@@ -82,7 +83,7 @@ export function analyzeJsonMergeDiff(target: any, source: any): {
   const targetKeys = new Set(Object.keys(target))
   const sourceKeys = new Set(Object.keys(source))
   
-  // 检查源对象的每个键
+  // Check each key of source object
   for (const key of sourceKeys) {
     if (!targetKeys.has(key)) {
       added.push(key)
@@ -97,7 +98,7 @@ export function analyzeJsonMergeDiff(target: any, source: any): {
 }
 
 /**
- * 合并 JSON 文件
+ * Merge JSON file
  */
 export async function mergeJsonFile(
   filepath: string, 
@@ -115,47 +116,47 @@ export async function mergeJsonFile(
 }> {
   if (!isJsonFile(filepath)) {
     throw new MergeNotSupportedError(
-      `文件不是 JSON 格式: ${filepath}`
+      t('json_merge.error.file_not_json', { file: filepath })
     )
   }
   
   const { createIfNotExists = true } = options
   
-  // 解析新内容
+  // Parse new content
   const sourceData = parseJsonSafely(newContent)
   
   let targetData: any = {}
   let fileExists = false
   
   try {
-    // 尝试读取现有文件
+    // Try to read existing file
     const existingContent = await readFile(filepath)
     targetData = parseJsonSafely(existingContent)
     fileExists = true
   } catch (error: any) {
     if (!createIfNotExists) {
       throw new FileOperationError(
-        `目标文件不存在且不允许创建: ${filepath}`
+        t('json_merge.error.file_not_exists_no_create', { file: filepath })
       )
     }
-    // 文件不存在，使用空对象作为目标
-    logger.debug(`目标文件不存在，将创建新文件: ${filepath}`)
+    // File doesn't exist, use empty object as target
+    logger.debug(t('json_merge.debug.creating_new_file', { file: filepath }))
   }
   
-  // 分析差异
+  // Analyze differences
   const diff = analyzeJsonMergeDiff(targetData, sourceData)
   
-  // 执行合并
+  // Execute merge
   const mergedData = mergeJsonObjects(targetData, sourceData)
   
-  // 写入合并结果
+  // Write merge result
   const mergedContent = stringifyJson(mergedData)
   await atomicWriteFile(filepath, mergedContent)
   
-  logger.debug(`JSON 合并完成: ${filepath}`)
-  logger.debug(`- 新增键: ${diff.added.length}`)
-  logger.debug(`- 修改键: ${diff.modified.length}`)
-  logger.debug(`- 不变键: ${diff.unchanged.length}`)
+  logger.debug(t('json_merge.debug.merge_completed', { file: filepath }))
+  logger.debug(t('json_merge.debug.keys_added', { count: diff.added.length }))
+  logger.debug(t('json_merge.debug.keys_modified', { count: diff.modified.length }))
+  logger.debug(t('json_merge.debug.keys_unchanged', { count: diff.unchanged.length }))
   
   return {
     success: true,
@@ -164,7 +165,7 @@ export async function mergeJsonFile(
 }
 
 /**
- * 预览 JSON 合并结果（不实际写入文件）
+ * Preview JSON merge result (without actually writing to file)
  */
 export async function previewJsonMerge(
   filepath: string,
@@ -183,11 +184,11 @@ export async function previewJsonMerge(
     if (!isJsonFile(filepath)) {
       return {
         canMerge: false,
-        error: `文件不是 JSON 格式: ${filepath}`
+        error: t('json_merge.error.file_not_json', { file: filepath })
       }
     }
     
-    // 解析新内容
+    // Parse new content
     const sourceData = parseJsonSafely(newContent)
     
     let targetData: any = {}
@@ -196,13 +197,13 @@ export async function previewJsonMerge(
       const existingContent = await readFile(filepath)
       targetData = parseJsonSafely(existingContent)
     } catch {
-      // 文件不存在或解析失败，使用空对象
+      // File doesn't exist or parsing failed, use empty object
     }
     
-    // 分析差异
+    // Analyze differences
     const diff = analyzeJsonMergeDiff(targetData, sourceData)
     
-    // 生成预览
+    // Generate preview
     const mergedData = mergeJsonObjects(targetData, sourceData)
     const preview = stringifyJson(mergedData)
     
@@ -220,7 +221,7 @@ export async function previewJsonMerge(
 }
 
 /**
- * 验证 JSON 内容是否可以安全合并
+ * Validate if JSON content can be safely merged
  */
 export function canSafelyMergeJson(content: string): {
   canMerge: boolean
@@ -232,7 +233,7 @@ export function canSafelyMergeJson(content: string): {
     if (!isPlainObject(data)) {
       return {
         canMerge: false,
-        error: 'JSON 内容必须是普通对象（非数组、非基础类型）'
+        error: t('json_merge.error.content_must_be_object')
       }
     }
     

@@ -1,5 +1,5 @@
 /**
- * 配置模块入口
+ * Configuration module entry point
  */
 
 export * from './constants'

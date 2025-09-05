@@ -1,118 +1,118 @@
 /**
- * 命令参数类型定义
+ * Command parameter type definitions
  */
 
-// 全局标志
+// Global flags
 export interface GlobalFlags {
-  /** 强制使用全局配置 */
+  /** Force use global configuration */
   global?: boolean
 }
 
-// Repo 命令相关
+// Repo command related
 export interface RepoAddFlags extends GlobalFlags {
-  /** 仓库别名 */
+  /** Repository alias */
   name?: string
-  /** 分支名 */
+  /** Branch name */
   branch?: string
 }
 
 export interface RepoUpdateArgs {
-  /** 仓库别名（可选，为空则更新所有） */
+  /** Repository alias (optional, updates all if empty) */
   alias?: string
 }
 
 export interface RepoRemoveArgs {
-  /** 仓库别名 */
+  /** Repository alias */
   alias: string
 }
 
-// Init 命令相关
+// Init command related
 export interface InitFlags {
-  /** 默认仓库 URL */
+  /** Default repository URL */
   repo?: string
-  /** 仓库别名 */
+  /** Repository alias */
   name?: string
-  /** 分支名 */
+  /** Branch name */
   branch?: string
-  /** 强制覆盖 */
+  /** Force overwrite */
   force?: boolean
 }
 
-// Apply 命令相关
+// Apply command related
 export interface ApplyFlags extends GlobalFlags {
-  /** Context 模板 ID */
+  /** Context template ID */
   context?: string
-  /** Prompt 模板 ID */
+  /** Prompt template ID */
   prompt?: string
-  /** 本地文件内容 */
+  /** Local file content */
   content?: string
-  /** 从标准输入读取 */
+  /** Read from standard input */
   stdin?: boolean
-  /** 目标目录或文件 */
+  /** Target directory or file */
   dest?: string
-  /** 文件名（当 dest 为目录时） */
+  /** Filename (when dest is a directory) */
   filename?: string
-  /** 写入模式 */
+  /** Write mode */
   mode?: 'write' | 'append' | 'merge'
-  /** 仓库别名 */
+  /** Repository alias */
   repo?: string
-  /** 预览模式 */
+  /** Preview mode */
   'dry-run'?: boolean
 }
 
-// Search 命令相关
+// Search command related
 export interface SearchArgs {
-  /** 搜索关键字 */
+  /** Search keyword */
   keyword?: string
 }
 
 export interface SearchFlags extends GlobalFlags {
-  /** 模板类型过滤 */
+  /** Template type filter */
   type?: 'context' | 'prompt'
-  /** 标签过滤 */
+  /** Label filter */
   label?: string[]
-  /** 深度搜索（需要 ripgrep） */
+  /** Deep search (requires ripgrep) */
   deep?: boolean
-  /** 仓库别名 */
+  /** Repository alias */
   repo?: string
 }
 
-// Show 命令相关
+// Show command related
 export interface ShowArgs {
-  /** 模板 ID */
+  /** Template ID */
   id: string
 }
 
 export interface ShowFlags extends GlobalFlags {
-  /** 仓库别名 */
+  /** Repository alias */
   repo?: string
-  /** 输出指定属性路径 */
+  /** Output specified property path */
   output?: string
 }
 
-// 应用结果
+// Application result
 export interface ApplyResult {
-  /** 目标文件路径 */
+  /** Target file path */
   targetPath: string
-  /** 写入模式 */
+  /** Write mode */
   mode: 'write' | 'append' | 'merge'
-  /** 是否为新文件 */
+  /** Whether it's a new file */
   isNewFile: boolean
-  /** 内容摘要 */
+  /** Content summary */
   contentSummary: string
-  /** 实际内容 */
+  /** Actual content */
   content: string
-  /** JSON 合并时的 key 差异 */
+  /** Key differences during JSON merge */
   jsonKeyDiff?: {
     added: string[]
     modified: string[]
   }
 }
 
-// 预览结果
+// Preview result
 export interface DryRunResult {
-  /** 将要应用的结果列表 */
+  /** List of results to be applied */
   results: ApplyResult[]
-  /** 总计文件数 */
+  /** Total number of files */
   totalFiles: number
 }

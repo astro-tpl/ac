@@ -2,21 +2,22 @@ import React, { useState, useEffect } from 'react'
 import { Box, Text } from 'ink'
 import { FilteredTextInput } from './FilteredTextInput'
 import { UITheme } from '@/types/ui'
+import { t } from '@/i18n'
 
 interface SearchInputProps {
-  /** 搜索查询 */
+  /** Search query */
   value: string
-  /** 搜索查询变化回调 */
+  /** Search query change callback */
   onChange: (value: string) => void
-  /** 占位符文本 */
+  /** Placeholder text */
   placeholder?: string
-  /** 是否正在搜索 */
+  /** Whether searching */
   isSearching?: boolean
-  /** 搜索结果数量 */
+  /** Search result count */
   resultCount?: number
-  /** 是否聚焦 */
+  /** Whether focused */
   focus?: boolean
-  /** UI 主题 */
+  /** UI theme */
   theme?: UITheme
 }
 

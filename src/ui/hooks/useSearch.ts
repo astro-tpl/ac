@@ -61,11 +61,11 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null)
   
   const performSearch = useCallback(async (query: string, filters: SearchState['filters']) => {
-    // 空查询且没有过滤器时，显示所有模板（用于初始状态）
+    // When query is empty and no filters, show all templates (for initial state)
     const isEmpty = !query.trim() && !filters.type && filters.labels.length === 0
     
-    // 对于真正的空查询（初始状态），我们要显示所有模板
-    // 但如果查询被清空了，我们也要重新显示所有模板
+    // For truly empty queries (initial state), we want to show all templates
+    // But if query is cleared, we also want to show all templates again
     
     setSearchState(prev => ({ ...prev, isLoading: true, error: undefined }))
     
@@ -73,7 +73,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
       const startTime = Date.now()
       
       const searchOptions = {
-        keyword: isEmpty ? '' : query, // 空查询时使用空字符串来获取所有模板
+        keyword: isEmpty ? '' : query, // Use empty string for empty queries to get all templates
         type: filters.type,
         labels: filters.labels,
         repoName: filters.repo,
@@ -119,7 +119,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
         clearTimeout(debounceTimer)
       }
       
-      // 如果防抖时间为0，立即执行搜索；否则设置定时器
+      // If debounce time is 0, execute search immediately; otherwise set timer
       if (config.debounceMs === 0) {
         performSearch(query, prev.filters)
       } else {
@@ -160,7 +160,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
       }
     })
     
-    // 清除查询后重新执行空搜索来显示所有模板
+    // After clearing query, re-execute empty search to show all templates
     performSearch('', {
       type: undefined,
       labels: [],
@@ -179,7 +179,7 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
           clearTimeout(debounceTimer)
         }
         
-        // 如果防抖时间为0，立即执行搜索；否则设置定时器
+        // If debounce time is 0, execute search immediately; otherwise set timer
         if (config.debounceMs === 0) {
           performSearch(prev.query, updatedFilters)
         } else {

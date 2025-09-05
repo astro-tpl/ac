@@ -1,5 +1,5 @@
 /**
- * YAML 读写工具
+ * YAML read/write utility
  */
 
 import * as yaml from 'js-yaml'
@@ -8,15 +8,15 @@ import { ConfigValidationError, TemplateValidationError } from '../types/errors'
 import { t } from '../i18n'
 
 /**
- * 读取并解析 YAML 文件
+ * Read and parse YAML file
  */
 export async function readYamlFile<T = any>(filepath: string): Promise<T> {
   try {
     const content = await readFile(filepath)
     const parsed = yaml.load(content, {
-      // 严格模式，不允许重复的 key
+      // Strict mode, no duplicate keys allowed
       json: true,
-      // 不允许执行任意代码
+      // No arbitrary code execution allowed
       schema: yaml.JSON_SCHEMA
     })
     
@@ -34,24 +34,24 @@ export async function readYamlFile<T = any>(filepath: string): Promise<T> {
 }
 
 /**
- * 将对象序列化为 YAML 并写入文件
+ * Serialize object to YAML and write to file
  */
 export async function writeYamlFile(filepath: string, data: any): Promise<void> {
   try {
     const yamlContent = yaml.dump(data, {
-      // 缩进 2 个空格
+      // Indent 2 spaces
       indent: 2,
-      // 使用流式格式，更紧凑
+      // Use flow format, more compact
       flowLevel: -1,
-      // 不对长字符串进行折行
+      // Don't wrap long strings
       lineWidth: -1,
-      // 不添加文档分隔符
+      // Don't add document separator
       noRefs: true,
-      // 不对 Unicode 字符进行转义
+      // Don't escape Unicode characters
       noCompatMode: true,
-      // 对字符串加引号的策略
+      // String quoting strategy
       quotingType: '"',
-      // 不强制引用
+      // Don't force quotes
       forceQuotes: false
     })
     
@@ -62,7 +62,7 @@ export async function writeYamlFile(filepath: string, data: any): Promise<void> 
 }
 
 /**
- * 解析 YAML 字符串
+ * Parse YAML string
  */
 export function parseYaml<T = any>(content: string): T {
   try {
@@ -85,7 +85,7 @@ export function parseYaml<T = any>(content: string): T {
 }
 
 /**
- * 将对象序列化为 YAML 字符串
+ * Serialize object to YAML string
  */
 export function stringifyYaml(data: any): string {
   try {
@@ -100,13 +100,13 @@ export function stringifyYaml(data: any): string {
     })
   } catch (error: any) {
     throw new ConfigValidationError(
-      `序列化 YAML 失败: ${error.message}`
+      t('yaml.error.serialize_failed', { error: error.message })
     )
   }
 }
 
 /**
- * 验证 YAML 格式是否正确
+ * Validate if YAML format is correct
  */
 export function isValidYaml(content: string): boolean {
   try {
@@ -121,7 +121,7 @@ export function isValidYaml(content: string): boolean {
 }
 
 /**
- * 安全地解析 YAML（返回 null 而不是抛出异常）
+ * Safely parse YAML (return null instead of throwing exception)
  */
 export function safeParseYaml<T = any>(content: string): T | null {
   try {
@@ -132,7 +132,7 @@ export function safeParseYaml<T = any>(content: string): T | null {
 }
 
 /**
- * 格式化 YAML 内容（美化）
+ * Format YAML content (beautify)
  */
 export function formatYaml(content: string): string {
   try {

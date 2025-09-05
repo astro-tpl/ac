@@ -1,5 +1,5 @@
 /**
- * 模板索引缓存机制
+ * Template index caching mechanism
  */
 
 import { join } from 'node:path'
@@ -9,56 +9,57 @@ import { INDEX_CACHE_PATH } from '../config/constants'
 import { TemplateIndex, IndexedTemplate, Template, RepoConfig } from '../types/index'
 import { getRepoPath } from '../config/paths'
 import { logger } from './logger'
+import { t } from '../i18n'
 
 /**
- * 索引缓存管理器
+ * Index Cache Manager
  */
 export class IndexCacheManager {
   private cacheVersion = 1
   
   /**
-   * 读取索引缓存
+   * Read index cache
    */
   async readCache(): Promise<TemplateIndex | null> {
     try {
       if (!await fileExists(INDEX_CACHE_PATH)) {
-        logger.debug('索引缓存文件不存在')
+        logger.debug(t('index_cache.debug.file_not_exists'))
         return null
       }
       
       const content = await readFile(INDEX_CACHE_PATH)
       const index = JSON.parse(content) as TemplateIndex
       
-      // 检查缓存版本
+      // Check cache version
       if (index.version !== this.cacheVersion) {
-        logger.debug(`索引缓存版本不匹配: ${index.version} vs ${this.cacheVersion}`)
+        logger.debug(t('index_cache.debug.version_mismatch', { current: index.version, expected: this.cacheVersion }))
         return null
       }
       
-      logger.debug(`读取索引缓存成功: ${index.templates.length} 个模板`)
+      logger.debug(t('index_cache.debug.read_success', { count: index.templates.length }))
       return index
     } catch (error: any) {
-      logger.debug(`读取索引缓存失败: ${error.message}`)
+      logger.debug(t('index_cache.debug.read_failed', { error: error.message }))
       return null
     }
   }
   
   /**
-   * 写入索引缓存
+   * Write index cache
    */
   async writeCache(index: TemplateIndex): Promise<void> {
     try {
       const content = JSON.stringify(index, null, 2)
       await atomicWriteFile(INDEX_CACHE_PATH, content)
-      logger.debug(`写入索引缓存成功: ${index.templates.length} 个模板`)
+      logger.debug(t('index_cache.debug.write_success', { count: index.templates.length }))
     } catch (error: any) {
-      logger.debug(`写入索引缓存失败: ${error.message}`)
-      // 缓存写入失败不应该影响主要功能，只记录错误
+      logger.debug(t('index_cache.debug.write_failed', { error: error.message }))
+      // Cache write failure should not affect main functionality, only log error
     }
   }
   
   /**
-   * 检查缓存是否需要更新
+   * Check if cache needs update
    */
   async needsUpdate(repos: RepoConfig[]): Promise<boolean> {
     const cache = await this.readCache()
@@ -66,19 +67,19 @@ export class IndexCacheManager {
       return true
     }
     
-    // 检查仓库是否有更新
+    // Check if repositories have updates
     for (const repo of repos) {
       const repoPath = getRepoPath(repo.name)
       const stats = await getFileStats(repoPath)
       
       if (!stats) {
-        // 仓库不存在，需要更新
+        // Repository doesn't exist, needs update
         return true
       }
       
-      // 检查仓库最后修改时间是否晚于缓存时间
+      // Check if repository last modified time is later than cache time
       if (stats.mtime.getTime() > cache.lastUpdated) {
-        logger.debug(`仓库 ${repo.name} 有更新，需要重建索引`)
+        logger.debug(t('index_cache.debug.repo_needs_update', { name: repo.name }))
         return true
       }
     }
@@ -87,10 +88,10 @@ export class IndexCacheManager {
   }
   
   /**
-   * 构建完整索引
+   * Build complete index
    */
   async buildIndex(repos: RepoConfig[]): Promise<TemplateIndex> {
-    logger.info('正在构建模板索引...')
+    logger.info(t('index_cache.info.building_index'))
     const templates: IndexedTemplate[] = []
     
     for (const repo of repos) {
@@ -104,29 +105,29 @@ export class IndexCacheManager {
       templates
     }
     
-    // 写入缓存
+    // Write cache
     await this.writeCache(index)
     
-    logger.success(`索引构建完成: ${templates.length} 个模板`)
+    logger.success(t('index_cache.success.build_complete', { count: templates.length }))
     return index
   }
   
   /**
-   * 扫描仓库中的模板
+   * Scan templates in repository
    */
   private async scanRepoTemplates(repo: RepoConfig): Promise<IndexedTemplate[]> {
     const repoPath = getRepoPath(repo.name)
     const templates: IndexedTemplate[] = []
     
     try {
-      // 扫描所有 YAML 文件
+      // Scan all YAML files
       const yamlFiles = await scanDirectory(repoPath, {
         extensions: ['.yaml', '.yml'],
         recursive: true,
         includeHidden: false
       })
       
-      logger.debug(`扫描仓库 ${repo.name}: 找到 ${yamlFiles.length} 个 YAML 文件`)
+      logger.debug(t('index_cache.debug.scan_repo', { name: repo.name, count: yamlFiles.length }))
       
       for (const filePath of yamlFiles) {
         try {
@@ -135,29 +136,29 @@ export class IndexCacheManager {
             templates.push(template)
           }
         } catch (error: any) {
-          logger.debug(`解析模板文件失败 ${filePath}: ${error.message}`)
-          // 继续处理其他文件，不因单个文件失败而中断
+          logger.debug(t('index_cache.debug.parse_template_failed', { file: filePath, error: error.message }))
+          // Continue processing other files, don't interrupt due to single file failure
         }
       }
       
-      logger.debug(`仓库 ${repo.name} 解析成功: ${templates.length} 个模板`)
+      logger.debug(t('index_cache.debug.repo_parse_success', { name: repo.name, count: templates.length }))
     } catch (error: any) {
-      logger.warn(`扫描仓库失败 ${repo.name}: ${error.message}`)
+      logger.warn(t('index_cache.warn.scan_repo_failed', { name: repo.name, error: error.message }))
     }
     
     return templates
   }
   
   /**
-   * 解析单个模板文件
+   * Parse single template file
    */
   private async parseTemplateFile(filePath: string, repoName: string): Promise<IndexedTemplate | null> {
     try {
       const template = await readYamlFile<Template>(filePath)
       
-      // 验证模板格式
+      // Validate template format
       if (!this.isValidTemplate(template)) {
-        logger.debug(`模板格式无效: ${filePath}`)
+        logger.debug(t('index_cache.debug.invalid_template_format', { file: filePath }))
         return null
       }
       
@@ -177,7 +178,7 @@ export class IndexCacheManager {
         lastModified: stats.mtime.getTime()
       }
       
-      // 为不同类型的模板添加特定字段
+      // Add specific fields for different types of templates
       if (template.type === 'prompt') {
         indexed.content = (template as any).content
       } else if (template.type === 'context') {
@@ -186,13 +187,13 @@ export class IndexCacheManager {
       
       return indexed
     } catch (error: any) {
-      logger.debug(`解析模板文件失败 ${filePath}: ${error.message}`)
+      logger.debug(t('index_cache.debug.parse_template_failed', { file: filePath, error: error.message }))
       return null
     }
   }
   
   /**
-   * 验证模板格式是否正确
+   * Validate if template format is correct
    */
   private isValidTemplate(template: any): template is Template {
     return template &&
@@ -202,39 +203,39 @@ export class IndexCacheManager {
   }
   
   /**
-   * 获取或构建索引
+   * Get or build index
    */
   async getIndex(repos: RepoConfig[], forceRebuild = false): Promise<TemplateIndex> {
     if (!forceRebuild) {
-      // 尝试读取缓存
+      // Try to read cache
       const cache = await this.readCache()
       if (cache && !await this.needsUpdate(repos)) {
-        logger.debug('使用缓存的索引')
+        logger.debug(t('index_cache.debug.using_cached_index'))
         return cache
       }
     }
     
-    // 构建新索引
+    // Build new index
     return this.buildIndex(repos)
   }
   
   /**
-   * 清除缓存
+   * Clear cache
    */
   async clearCache(): Promise<void> {
     try {
       if (await fileExists(INDEX_CACHE_PATH)) {
         const { unlink } = await import('node:fs/promises')
         await unlink(INDEX_CACHE_PATH)
-        logger.debug('索引缓存已清除')
+        logger.debug(t('index_cache.debug.cache_cleared'))
       }
     } catch (error: any) {
-      logger.debug(`清除索引缓存失败: ${error.message}`)
+      logger.debug(t('index_cache.debug.clear_cache_failed', { error: error.message }))
     }
   }
   
   /**
-   * 获取缓存统计信息
+   * Get cache statistics
    */
   async getCacheStats(): Promise<{
     exists: boolean
@@ -264,25 +265,25 @@ export class IndexCacheManager {
   }
 }
 
-// 全局索引缓存管理器实例
+// Global index cache manager instance
 export const indexCache = new IndexCacheManager()
 
 /**
- * 快捷方法：获取索引
+ * Shortcut method: Get index
  */
 export async function getTemplateIndex(repos: RepoConfig[], forceRebuild = false): Promise<TemplateIndex> {
   return indexCache.getIndex(repos, forceRebuild)
 }
 
 /**
- * 快捷方法：重建索引
+ * Shortcut method: Rebuild index
  */
 export async function rebuildTemplateIndex(repos: RepoConfig[]): Promise<TemplateIndex> {
   return indexCache.buildIndex(repos)
 }
 
 /**
- * 快捷方法：清除索引缓存
+ * Shortcut method: Clear index cache
  */
 export async function clearTemplateIndex(): Promise<void> {
   return indexCache.clearCache()

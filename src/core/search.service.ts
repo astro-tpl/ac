@@ -1,5 +1,5 @@
 /**
- * 搜索服务 - 索引构建、关键字匹配、打分算法
+ * Search Service - Index building, keyword matching, scoring algorithms
  */
 
 import { configService } from './config.service'
@@ -18,35 +18,35 @@ import { logger } from '../infra/logger'
 import { t } from '../i18n'
 
 /**
- * 搜索选项
+ * Search options
  */
 export interface SearchOptions {
-  /** 关键字 */
+  /** Keyword */
   keyword?: string
-  /** 模板类型过滤 */
+  /** Template type filter */
   type?: 'prompt' | 'context'
-  /** 标签过滤 */
+  /** Label filter */
   labels?: string[]
-  /** 标签匹配模式 */
+  /** Label matching mode */
   labelMatchAll?: boolean
-  /** 仓库过滤 */
+  /** Repository filter */
   repoName?: string
-  /** 强制使用全局配置 */
+  /** Force use global configuration */
   forceGlobal?: boolean
-  /** 最大结果数 */
+  /** Maximum results */
   maxResults?: number
-  /** 是否启用拼音搜索 */
+  /** Whether to enable pinyin search */
   enablePinyin?: boolean
-  /** 搜索阈值 */
+  /** Search threshold */
   threshold?: number
 }
 
 /**
- * 搜索服务类
+ * Search Service Class
  */
 export class SearchService {
   /**
-   * 搜索模板
+   * Search templates
    */
   async searchTemplates(options: SearchOptions = {}): Promise<SearchResult[]> {
     const {
@@ -61,11 +61,11 @@ export class SearchService {
       threshold = -10000
     } = options
     
-    // 获取配置和仓库信息
+    // Get configuration and repository information
     const resolvedConfig = await configService.resolveConfig({ forceGlobal })
     let repos = resolvedConfig.config.repos
     
-    // 过滤仓库
+    // Filter repositories
     if (repoName) {
       repos = repos.filter(r => r.name === repoName)
       if (repos.length === 0) {
@@ -79,18 +79,18 @@ export class SearchService {
       return []
     }
     
-    // 获取索引
+    // Get index
     const index = await getTemplateIndex(repos)
     
-    // 过滤模板
+    // Filter templates
     let templates = index.templates
     
-    // 按类型过滤
+    // Filter by type
     if (type) {
       templates = templates.filter(t => t.type === type)
     }
     
-    // 按标签过滤
+    // Filter by labels
     if (labels.length > 0) {
       templates = templates.filter(template => {
         if (labelMatchAll) {
@@ -101,7 +101,7 @@ export class SearchService {
       })
     }
     
-    // 使用 fuzzysort 进行搜索
+    // Use fuzzysort for search
     const results = fuzzysortSearch(templates, keyword, {
       limit: maxResults,
       threshold,
@@ -112,10 +112,10 @@ export class SearchService {
     return results
   }
   
-  // 旧的搜索方法已被 fuzzysort 替代
+  // Old search method has been replaced by fuzzysort
   
   /**
-   * 深度搜索（使用 ripgrep）
+   * Deep search (using ripgrep)
    */
   private async deepSearch(
     keyword: string,
@@ -127,12 +127,12 @@ export class SearchService {
       caseSensitive?: boolean
     }
   ): Promise<SearchResult[]> {
-    // TODO: 临时禁用深度搜索，将在重构时使用 fuzzysort 重新实现
+    // TODO: Temporarily disable deep search, will re-implement using fuzzysort during refactoring
     logger.debug('Deep search temporarily disabled, will be reimplemented with fuzzysort')
     return []
     
     /* 
-    // 检查 ripgrep 是否可用
+    // Check if ripgrep is available
     if (!await checkRipgrepAvailable()) {
       throw new Error(t('error.ripgrep.not_available'))
     }
@@ -142,14 +142,14 @@ export class SearchService {
     
     for (const repo of repos) {
       try {
-        // 在仓库中搜索内容
+        // Search content in repository
         const repoPath = `~/.ac/repos/${repo.name}`
         const ripgrepResults = await searchTemplateContent(keyword, [repoPath], {
           caseSensitive,
           maxResults: 100
         })
         
-        // 为每个匹配的文件加载模板
+        // Load template for each matched file
         const processedFiles = new Set<string>()
         
         for (const rgResult of ripgrepResults) {
@@ -163,7 +163,7 @@ export class SearchService {
               repoName: repo.name
             })
             
-            // 应用过滤条件
+            // Apply filter conditions
             if (type && template.type !== type) {
               continue
             }
@@ -172,7 +172,7 @@ export class SearchService {
               continue
             }
             
-            // 创建索引模板对象
+            // Create indexed template object
             const indexedTemplate: IndexedTemplate = {
               id: template.id,
               type: template.type,
@@ -185,7 +185,7 @@ export class SearchService {
             }
             
             results.push({
-              score: SEARCH_WEIGHTS.CONTENT, // 深度搜索的基础分数
+              score: SEARCH_WEIGHTS.CONTENT, // Base score for deep search
               template: indexedTemplate,
               matchedFields: ['content']
             })
@@ -202,18 +202,18 @@ export class SearchService {
     */
   }
   
-  // 搜索得分计算已由 fuzzysort 处理
+  // Search scoring has been handled by fuzzysort
   
-  // 匹配字段检测已由 fuzzysort 处理
+  // Matching field detection has been handled by fuzzysort
   
-  // 模糊匹配已由 fuzzysort 处理
+  // Fuzzy matching has been handled by fuzzysort
   
-  // 标签匹配已集成到主搜索方法中
+  // Tag matching has been integrated into main search method
   
-  // 结果排序已由 fuzzysort 处理
+  // Result sorting has been handled by fuzzysort
   
   /**
-   * 获取搜索统计信息
+   * Get search statistics
    */
   async getSearchStats(options: { forceGlobal?: boolean } = {}): Promise<{
     totalTemplates: number
@@ -257,7 +257,7 @@ export class SearchService {
   }
   
   /**
-   * 重建搜索索引
+   * Rebuild search index
    */
   async rebuildIndex(options: { forceGlobal?: boolean } = {}): Promise<{
     success: boolean
@@ -291,5 +291,5 @@ export class SearchService {
   }
 }
 
-// 全局搜索服务实例
+// Global search service instance
 export const searchService = new SearchService()

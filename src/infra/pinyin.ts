@@ -1,33 +1,33 @@
 /**
- * 拼音搜索工具 - 支持中文拼音模糊搜索
- * 根据规格文档第138行要求实现
+ * Pinyin search utility - Support Chinese pinyin fuzzy search
+ * Implemented according to requirements in line 138 of specification document
  */
 
 import { pinyin } from 'pinyin-pro'
 
 /**
- * 将中文字符转换为拼音
+ * Convert Chinese characters to pinyin
  */
 export function toPinyin(text: string): string[] {
   const result: string[] = []
   
   for (const char of text) {
     if (/[\u4e00-\u9fa5]/.test(char)) {
-      // 中文字符，转换为拼音
+      // Chinese character, convert to pinyin
       const pinyinResult = pinyin(char, { toneType: 'none', type: 'array' })
       result.push(...pinyinResult)
     } else if (/[a-zA-Z0-9]/.test(char)) {
-      // 保留英文字符和数字
+      // Keep English characters and numbers
       result.push(char.toLowerCase())
     }
-    // 忽略其他字符（标点等）
+    // Ignore other characters (punctuation, etc.)
   }
   
   return result
 }
 
 /**
- * 拼音模糊匹配
+ * Pinyin fuzzy matching
  */
 export function pinyinFuzzyMatch(text: string, pattern: string): boolean {
   if (!pattern || !text) return false
@@ -35,18 +35,18 @@ export function pinyinFuzzyMatch(text: string, pattern: string): boolean {
   const textLower = text.toLowerCase()
   const patternLower = pattern.toLowerCase()
   
-  // 直接文本匹配
+  // Direct text matching
   if (textLower.includes(patternLower)) {
     return true
   }
   
-  // 拼音匹配 - 使用 pinyin-pro
+  // Pinyin matching - using pinyin-pro
   const textPinyin = pinyin(text, { toneType: 'none', type: 'array' }).join('')
   if (textPinyin.toLowerCase().includes(patternLower)) {
     return true
   }
   
-  // 拼音首字母匹配
+  // Pinyin initial matching
   const textInitials = pinyin(text, { toneType: 'none', type: 'array' })
     .map(py => py.charAt(0)).join('')
   if (textInitials.toLowerCase().includes(patternLower)) {
@@ -57,7 +57,7 @@ export function pinyinFuzzyMatch(text: string, pattern: string): boolean {
 }
 
 /**
- * 计算拼音匹配得分
+ * Calculate pinyin matching score
  */
 export function pinyinMatchScore(text: string, pattern: string): number {
   if (!pattern || !text) return 0
@@ -65,17 +65,17 @@ export function pinyinMatchScore(text: string, pattern: string): number {
   const textLower = text.toLowerCase()
   const patternLower = pattern.toLowerCase()
   
-  // 完全匹配
+  // Exact match
   if (textLower === patternLower) {
     return 10
   }
   
-  // 包含匹配
+  // Contains match
   if (textLower.includes(patternLower)) {
     return 8
   }
   
-  // 拼音完全匹配 - 使用 pinyin-pro
+  // Pinyin exact match - using pinyin-pro
   const textPinyin = pinyin(text, { toneType: 'none', type: 'array' }).join('').toLowerCase()
   const patternPinyin = pinyin(pattern, { toneType: 'none', type: 'array' }).join('').toLowerCase()
   
@@ -83,12 +83,12 @@ export function pinyinMatchScore(text: string, pattern: string): number {
     return 6
   }
   
-  // 拼音包含匹配
+  // Pinyin contains match
   if (textPinyin.includes(patternLower)) {
     return 4
   }
   
-  // 拼音首字母匹配
+  // Pinyin initial matching
   const textInitials = pinyin(text, { toneType: 'none', type: 'array' })
     .map(py => py.charAt(0)).join('').toLowerCase()
   
@@ -100,7 +100,7 @@ export function pinyinMatchScore(text: string, pattern: string): number {
 }
 
 /**
- * 检测是否包含中文字符
+ * Detect if contains Chinese characters
  */
 export function containsChinese(text: string): boolean {
   return /[\u4e00-\u9fff]/.test(text)

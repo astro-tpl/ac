@@ -1,6 +1,6 @@
 /**
- * Fuzzysort 搜索引擎封装
- * 替代 ripgrep，提供模糊搜索功能，支持中文拼音搜索
+ * Fuzzysort search engine wrapper
+ * Replaces ripgrep, provides fuzzy search functionality with Chinese pinyin support
  */
 
 import fuzzysort from 'fuzzysort'
@@ -8,17 +8,17 @@ import { toPinyin, containsChinese } from './pinyin'
 import { IndexedTemplate, SearchResult } from '../types/template'
 import { DEFAULT_SEARCH_CONFIG } from '../types/ui'
 
-// 搜索选项
+// Search options
 export interface FuzzysortSearchOptions {
-  /** 搜索关键词 */
+  /** Search keywords */
   query: string
-  /** 最大结果数 */
+  /** Maximum results */
   limit?: number
-  /** 阈值，低于此分数的结果将被过滤 */
+  /** Threshold, results below this score will be filtered */
   threshold?: number
-  /** 是否启用拼音搜索 */
+  /** Whether to enable pinyin search */
   enablePinyin?: boolean
-  /** 搜索权重配置 */
+  /** Search weight configuration */
   weights?: {
     id: number
     name: number
@@ -28,7 +28,7 @@ export interface FuzzysortSearchOptions {
   }
 }
 
-// 搜索字段配置
+// Search field configuration
 export interface SearchField {
   key: string
   weight: number
@@ -36,13 +36,13 @@ export interface SearchField {
 }
 
 /**
- * Fuzzysort 搜索引擎类
+ * Fuzzysort Search Engine Class
  */
 export class FuzzysortSearchEngine {
   private searchFields: SearchField[]
 
   constructor() {
-    // 定义搜索字段和权重
+    // Define search fields and weights
     this.searchFields = [
       {
         key: 'id',
@@ -68,7 +68,7 @@ export class FuzzysortSearchEngine {
   }
 
   /**
-   * 搜索模板
+   * Search templates
    */
   search(templates: IndexedTemplate[], options: FuzzysortSearchOptions): SearchResult[] {
     const {
@@ -89,7 +89,7 @@ export class FuzzysortSearchEngine {
 
     const results: SearchResult[] = []
 
-    // 为每个模板计算搜索得分
+    // Calculate search score for each template
     for (const template of templates) {
       const searchResult = this.searchTemplate(template, query, {
         threshold,
@@ -102,14 +102,14 @@ export class FuzzysortSearchEngine {
       }
     }
 
-    // 按得分排序并限制结果数量
+    // Sort by score and limit result count
     return results
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
   }
 
   /**
-   * 搜索单个模板
+   * Search single template
    */
   private searchTemplate(
     template: IndexedTemplate,
@@ -124,7 +124,7 @@ export class FuzzysortSearchEngine {
     let totalScore = 0
     const matchedFields: string[] = []
 
-    // 搜索各个字段
+    // Search each field
     for (const field of this.searchFields) {
       const fieldValue = field.getter(template)
       if (!fieldValue) continue
@@ -140,7 +140,7 @@ export class FuzzysortSearchEngine {
       }
     }
 
-    // 如果没有匹配的字段，返回 null
+    // If no matching fields, return null
     if (matchedFields.length === 0) {
       return null
     }
@@ -153,7 +153,7 @@ export class FuzzysortSearchEngine {
   }
 
   /**
-   * 搜索单个字段
+   * Search single field
    */
   private searchField(
     fieldValue: string,
@@ -165,15 +165,15 @@ export class FuzzysortSearchEngine {
   ): number {
     const { enablePinyin, weight } = options
 
-    // 直接搜索原始文本
+    // Search original text directly
     const directResult = fuzzysort.single(query, fieldValue)
     let bestScore = directResult ? directResult.score : -Infinity
 
-    // 如果启用拼音搜索且包含中文，则同时搜索拼音
+    // If pinyin search is enabled and contains Chinese, search pinyin simultaneously
     if (enablePinyin && containsChinese(fieldValue)) {
       const pinyinArray = toPinyin(fieldValue)
       
-      // 搜索有空格的拼音版本 (e.g., "pei zhi")
+      // Search spaced pinyin version (e.g., "pei zhi")
       const pinyinWithSpaces = pinyinArray.join(' ')
       const pinyinSpacedResult = fuzzysort.single(query, pinyinWithSpaces)
       
@@ -181,7 +181,7 @@ export class FuzzysortSearchEngine {
         bestScore = pinyinSpacedResult.score
       }
       
-      // 搜索无空格的拼音版本 (e.g., "peizhi")
+      // Search non-spaced pinyin version (e.g., "peizhi")
       const pinyinWithoutSpaces = pinyinArray.join('')
       const pinyinJoinedResult = fuzzysort.single(query, pinyinWithoutSpaces)
       
@@ -189,7 +189,7 @@ export class FuzzysortSearchEngine {
         bestScore = pinyinJoinedResult.score
       }
 
-      // 搜索拼音首字母
+      // Search pinyin initials
       const pinyinInitials = this.getPinyinInitials(fieldValue)
       const initialsResult = fuzzysort.single(query, pinyinInitials)
       
@@ -198,12 +198,12 @@ export class FuzzysortSearchEngine {
       }
     }
 
-    // 应用权重
+    // Apply weight
     return bestScore === -Infinity ? -Infinity : bestScore * weight
   }
 
   /**
-   * 获取拼音首字母
+   * Get pinyin initials
    */
   private getPinyinInitials(text: string): string {
     const pinyinArray = toPinyin(text)
@@ -214,7 +214,7 @@ export class FuzzysortSearchEngine {
   }
 
   /**
-   * 高亮搜索结果
+   * Highlight search results
    */
   highlightMatches(
     template: IndexedTemplate,
@@ -230,7 +230,7 @@ export class FuzzysortSearchEngine {
       const fieldValue = field.getter(template)
       if (!fieldValue) continue
 
-      // 使用 fuzzysort 进行高亮
+      // Use fuzzysort for highlighting
       const result = fuzzysort.single(query, fieldValue)
       if (result) {
         highlighted[fieldKey] = fuzzysort.highlight(result, '<mark>', '</mark>') || fieldValue
@@ -243,7 +243,7 @@ export class FuzzysortSearchEngine {
   }
 
   /**
-   * 获取搜索建议
+   * Get search suggestions
    */
   getSuggestions(
     templates: IndexedTemplate[],
@@ -254,14 +254,14 @@ export class FuzzysortSearchEngine {
 
     const suggestions = new Set<string>()
 
-    // 从模板 ID 和名称中提取建议
+    // Extract suggestions from template ID and name
     for (const template of templates) {
-      // ID 建议
+      // ID suggestions
       if (template.id.toLowerCase().includes(query.toLowerCase())) {
         suggestions.add(template.id)
       }
 
-      // 名称建议
+      // Name suggestions
       const nameWords = template.name.split(/\s+/)
       for (const word of nameWords) {
         if (word.toLowerCase().includes(query.toLowerCase())) {
@@ -269,7 +269,7 @@ export class FuzzysortSearchEngine {
         }
       }
 
-      // 标签建议
+      // Label suggestions
       for (const label of template.labels) {
         if (label.toLowerCase().includes(query.toLowerCase())) {
           suggestions.add(label)
@@ -283,11 +283,11 @@ export class FuzzysortSearchEngine {
   }
 }
 
-// 全局搜索引擎实例
+// Global search engine instance
 export const fuzzysortSearchEngine = new FuzzysortSearchEngine()
 
 /**
- * 便捷搜索函数
+ * Convenient search function
  */
 export function searchTemplates(
   templates: IndexedTemplate[],
@@ -301,7 +301,7 @@ export function searchTemplates(
 }
 
 /**
- * 高亮搜索结果
+ * Highlight search results
  */
 export function highlightSearchResults(
   template: IndexedTemplate,
@@ -312,7 +312,7 @@ export function highlightSearchResults(
 }
 
 /**
- * 获取搜索建议
+ * Get search suggestions
  */
 export function getSearchSuggestions(
   templates: IndexedTemplate[],

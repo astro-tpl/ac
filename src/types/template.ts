@@ -1,82 +1,82 @@
 /**
- * 模板类型定义
+ * Template type definitions
  */
 
-// 模板公共头部
+// Common template header
 export interface TemplateHeader {
-  /** 唯一模板 ID */
+  /** Unique template ID */
   id: string
-  /** 模板类型 */
+  /** Template type */
   type: 'prompt' | 'context'
-  /** 可读名称 */
+  /** Readable name */
   name: string
-  /** 标签列表 */
+  /** Tag list */
   labels: string[]
-  /** 简要说明 */
+  /** Brief description */
   summary: string
 }
 
-// Prompt 模板
+// Prompt template
 export interface PromptTemplate extends TemplateHeader {
   type: 'prompt'
-  /** 提示词内容 */
+  /** Prompt content */
   content: string
 }
 
-// Context 目标配置
+// Context target configuration
 export interface TargetConfig {
-  /** 目标文件路径（可含插值变量） */
+  /** Target file path (can contain interpolation variables) */
   path: string
-  /** 写入模式 */
+  /** Write mode */
   mode: 'write' | 'append' | 'merge'
-  /** 直接内容（可含插值变量） */
+  /** Direct content (can contain interpolation variables) */
   content?: string
-  /** 引用 prompt 的 ID */
+  /** Referenced prompt ID */
   content_from_prompt?: string
-  /** 内容拼接顺序 */
+  /** Content concatenation order */
   content_order?: 'content-first' | 'prompt-first'
 }
 
-// Context 模板
+// Context template
 export interface ContextTemplate extends TemplateHeader {
   type: 'context'
-  /** 目标文件列表 */
+  /** Target file list */
   targets: TargetConfig[]
 }
 
-// 联合类型
+// Union type
 export type Template = PromptTemplate | ContextTemplate
 
-// 索引化的模板（用于搜索）
+// Indexed template (used for search)
 export interface IndexedTemplate extends TemplateHeader {
-  /** 模板来源仓库 */
+  /** Template source repository */
   repoName: string
-  /** 模板文件绝对路径 */
+  /** Template file absolute path */
   absPath: string
-  /** 最后修改时间 */
+  /** Last modified time */
   lastModified: number
-  /** 模板内容（对于 prompt 类型） */
+  /** Template content (for prompt type) */
   content?: string
-  /** 目标配置（对于 context 类型） */
+  /** Target configuration (for context type) */
   targets?: TargetConfig[]
 }
 
-// 搜索结果
+// Search result
 export interface SearchResult {
-  /** 匹配得分 */
+  /** Match score */
   score: number
-  /** 模板信息 */
+  /** Template information */
   template: IndexedTemplate
-  /** 匹配的字段 */
+  /** Matched fields */
   matchedFields: string[]
 }
 
-// 模板索引缓存
+// Template index cache
 export interface TemplateIndex {
-  /** 索引版本 */
+  /** Index version */
   version: number
-  /** 最后更新时间 */
+  /** Last update time */
   lastUpdated: number
-  /** 索引的模板列表 */
+  /** List of indexed templates */
   templates: IndexedTemplate[]
 }

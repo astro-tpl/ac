@@ -1,0 +1,55 @@
+重构:
+  模板解析调整:
+    通用:
+      - "summary 字段改为可选字段, 可以省略"
+      - "content 字段支持插值变量替换"
+    context 模板:
+      - "将 targets 重命名为 files"
+      - "去除 content_from_prompt 字段, 统一用 content 字段"
+    插值语法:
+      - "插值语法支持 {{prompt_id}} 变量替换"
+      - "仅支持 type 为 prompt 的模板引用"
+      - "context 模板的 content 和 prompt 模板的 content 都需要支持插值变量替换"
+    examples:
+      prompt_template: |
+        version: v1.0.0
+        id: "ac.io/v1/spec/common/principles"
+        type: "prompt"
+        name: "项目通用基础配置"
+        labels: [common", "principles"]
+        content: |
+          # 引用项目通用基础配置
+          {{ac.io/v1/coding/principles}}
+      context_template: |
+        version: v1.0.0
+        id: "ac.io/v1/ctx/cursor/default"
+        type: "context"
+        name: "Cursor 基础规则"
+        labels: [cursor", "rules"]
+        summary: "Cursor 项目通用基础配置"
+        files:
+          - path: ".cursor/principles.mdc"
+            content: |
+              ---
+              alwaysApply: true
+              ---
+
+              # 编写任意代码都需严格遵循以下原则
+
+              ```yaml
+              {{ac.io/v1/spec/common/principles}}
+              ```
+          - path: ".cursor/shell.mdc"
+            content: |
+              ---
+              description: Shell脚本编写规范
+              globs:
+                - "**/*.sh"
+              alwaysApply: false
+              ---
+
+              # 编写任意 shell 代码都需严格遵循以下原则
+
+              ```yaml
+              {{ac.io/v1/spec/lang/shell}}
+              ```

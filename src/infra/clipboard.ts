@@ -1,6 +1,6 @@
 /**
- * 系统剪切板操作封装
- * 使用 clipboardy 库提供跨平台剪切板支持
+ * System clipboard operation wrapper
+ * Use clipboardy library to provide cross-platform clipboard support
  */
 
 import clipboardy from 'clipboardy'
@@ -8,23 +8,23 @@ import { logger } from './logger'
 import { t } from '../i18n'
 
 /**
- * 剪切板操作结果
+ * Clipboard operation result
  */
 export interface ClipboardResult {
-  /** 操作是否成功 */
+  /** Whether operation succeeded */
   success: boolean
-  /** 错误信息（如果失败） */
+  /** Error message (if failed) */
   error?: string
-  /** 复制的内容长度（如果成功） */
+  /** Length of copied content (if successful) */
   length?: number
 }
 
 /**
- * 剪切板操作类
+ * Clipboard operation class
  */
 export class ClipboardManager {
   /**
-   * 复制文本到剪切板
+   * Copy text to clipboard
    */
   async copyText(text: string): Promise<ClipboardResult> {
     try {
@@ -55,7 +55,7 @@ export class ClipboardManager {
   }
 
   /**
-   * 从剪切板读取文本
+   * Read text from clipboard
    */
   async readText(): Promise<ClipboardResult & { content?: string }> {
     try {
@@ -80,11 +80,11 @@ export class ClipboardManager {
   }
 
   /**
-   * 检查剪切板是否可用
+   * Check if clipboard is available
    */
   async isAvailable(): Promise<boolean> {
     try {
-      // 尝试读取剪切板内容来测试可用性
+      // Try to read clipboard content to test availability
       await clipboardy.read()
       return true
     } catch (error) {
@@ -94,7 +94,7 @@ export class ClipboardManager {
   }
 
   /**
-   * 清空剪切板
+   * Clear clipboard
    */
   async clear(): Promise<ClipboardResult> {
     try {
@@ -118,8 +118,8 @@ export class ClipboardManager {
   }
 
   /**
-   * 复制模板内容到剪切板
-   * 根据模板类型格式化内容
+   * Copy template content to clipboard
+   * Format content based on template type
    */
   async copyTemplateContent(template: {
     id: string
@@ -133,7 +133,7 @@ export class ClipboardManager {
       let contentToCopy = ''
 
       if (template.type === 'prompt') {
-        // 对于 prompt 类型，直接从文件读取 content
+        // For prompt type, read content directly from file
         if (template.absPath) {
           const fs = await import('node:fs/promises')
           try {
@@ -148,17 +148,17 @@ export class ClipboardManager {
           contentToCopy = ''
         }
       } else if (template.type === 'context') {
-        // 对于 context 类型，读取并复制整个文件内容
+        // For context type, read and copy entire file content
         const fs = await import('node:fs/promises')
         const path = await import('node:path')
         
-        // 使用模板的 absPath 属性
+        // Use template's absPath property
         const filePath = template.absPath
         if (filePath) {
           try {
             contentToCopy = await fs.readFile(filePath, 'utf-8')
           } catch (error) {
-            // 如果读取文件失败，回退到模板信息
+            // If reading file fails, fallback to template info
             contentToCopy = `# ${template.name}\n\nTemplate ID: ${template.id}\nType: ${template.type}\n\n`
             if (template.targets && template.targets.length > 0) {
               contentToCopy += 'Targets:\n'
@@ -168,7 +168,7 @@ export class ClipboardManager {
             }
           }
         } else {
-          // 没有文件路径时的回退逻辑
+          // Fallback logic when no file path available
           contentToCopy = `# ${template.name}\n\nTemplate ID: ${template.id}\nType: ${template.type}\n\n`
           if (template.targets && template.targets.length > 0) {
             contentToCopy += 'Targets:\n'
@@ -199,7 +199,7 @@ export class ClipboardManager {
   }
 
   /**
-   * 复制搜索结果摘要到剪切板
+   * Copy search results summary to clipboard
    */
   async copySearchSummary(results: Array<{
     template: {
@@ -241,32 +241,32 @@ export class ClipboardManager {
   }
 }
 
-// 全局剪切板管理器实例
+// Global clipboard manager instance
 export const clipboardManager = new ClipboardManager()
 
 /**
- * 便捷函数：复制文本到剪切板
+ * Convenience function: copy text to clipboard
  */
 export async function copyToClipboard(text: string): Promise<ClipboardResult> {
   return clipboardManager.copyText(text)
 }
 
 /**
- * 便捷函数：从剪切板读取文本
+ * Convenience function: read text from clipboard
  */
 export async function readFromClipboard(): Promise<ClipboardResult & { content?: string }> {
   return clipboardManager.readText()
 }
 
 /**
- * 便捷函数：检查剪切板是否可用
+ * Convenience function: check if clipboard is available
  */
 export async function isClipboardAvailable(): Promise<boolean> {
   return clipboardManager.isAvailable()
 }
 
 /**
- * 便捷函数：复制模板内容
+ * Convenience function: copy template content
  */
 export async function copyTemplateToClipboard(template: {
   id: string

@@ -1,5 +1,5 @@
 /**
- * 类型定义入口文件
+ * Type definitions entry file
  */
 
 export * from './config'

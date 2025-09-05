@@ -2,21 +2,22 @@ import React from 'react'
 import { Box, Text } from 'ink'
 import { SearchResult } from '@/types/template'
 import { UITheme } from '@/types/ui'
+import { t } from '@/i18n'
 
 interface ResultsListProps {
-  /** 搜索结果 */
+  /** Search results */
   results: SearchResult[]
-  /** 当前选中的索引 */
+  /** Currently selected index */
   selectedIndex: number
-  /** 是否显示评分 */
+  /** Whether to show score */
   showScore?: boolean
-  /** 最大显示结果数 */
+  /** Maximum display results */
   maxDisplay?: number
-  /** UI 主题 */
+  /** UI theme */
   theme?: UITheme
-  /** 高亮查询关键词 */
+  /** Highlight query keywords */
   highlightQuery?: string
-  /** 搜索时间 */
+  /** Search time */
   searchTime?: number
 }
 

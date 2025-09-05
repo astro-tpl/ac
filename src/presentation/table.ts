@@ -1,42 +1,42 @@
 /**
- * 表格输出格式化工具
+ * Table output formatting utility
  */
 import { t } from '../i18n'
 
 /**
- * 表格列定义
+ * Table column definition
  */
 export interface TableColumn {
-  /** 列标题 */
+  /** Column header */
   header: string
-  /** 列键名 */
+  /** Column key name */
   key: string
-  /** 列宽度 */
+  /** Column width */
   width?: number
-  /** 对齐方式 */
+  /** Alignment */
   align?: 'left' | 'center' | 'right'
-  /** 格式化函数 */
+  /** Formatter function */
   formatter?: (value: any) => string
 }
 
 /**
- * 表格选项
+ * Table options
  */
 export interface TableOptions {
-  /** 是否显示边框 */
+  /** Whether to show borders */
   border?: boolean
-  /** 是否显示表头 */
+  /** Whether to show header */
   header?: boolean
-  /** 表格样式 */
+  /** Table style */
   style?: 'simple' | 'grid' | 'compact'
-  /** 最大列宽 */
+  /** Maximum column width */
   maxColumnWidth?: number
-  /** 截断长文本 */
+  /** Truncate long text */
   truncate?: boolean
 }
 
 /**
- * 表格渲染器
+ * Table renderer
  */
 export class TableRenderer {
   private options: Required<TableOptions>
@@ -53,20 +53,20 @@ export class TableRenderer {
   }
   
   /**
-   * 渲染表格
+   * Render table
    */
   render(data: any[], columns: TableColumn[]): string {
     if (data.length === 0) {
       return t('table.no_data')
     }
     
-    // 计算列宽
+    // Calculate column widths
     const columnWidths = this.calculateColumnWidths(data, columns)
     
-    // 生成表格内容
+    // Generate table content
     const lines: string[] = []
     
-    // 表头
+    // Table header
     if (this.options.header) {
       lines.push(this.renderHeader(columns, columnWidths))
       if (this.options.border) {
@@ -74,12 +74,12 @@ export class TableRenderer {
       }
     }
     
-    // 数据行
+    // Data rows
     for (const row of data) {
       lines.push(this.renderRow(row, columns, columnWidths))
     }
     
-    // 底部边框
+    // Bottom border
     if (this.options.border && this.options.style === 'grid') {
       lines.push(this.renderSeparator(columnWidths))
     }
@@ -88,7 +88,7 @@ export class TableRenderer {
   }
   
   /**
-   * 计算列宽
+   * Calculate column widths
    */
   private calculateColumnWidths(data: any[], columns: TableColumn[]): number[] {
     const widths: number[] = []
@@ -97,13 +97,13 @@ export class TableRenderer {
       const column = columns[i]
       let maxWidth = column.width || column.header.length
       
-      // 检查数据中的最大宽度
+      // Check maximum width in data
       for (const row of data) {
         const value = this.formatCellValue(row[column.key], column)
         maxWidth = Math.max(maxWidth, this.getDisplayWidth(value))
       }
       
-      // 应用最大列宽限制
+      // Apply maximum column width limit
       if (this.options.maxColumnWidth > 0) {
         maxWidth = Math.min(maxWidth, this.options.maxColumnWidth)
       }
@@ -115,7 +115,7 @@ export class TableRenderer {
   }
   
   /**
-   * 渲染表头
+   * Render table header
    */
   private renderHeader(columns: TableColumn[], widths: number[]): string {
     const cells = columns.map((column, i) => {
@@ -134,7 +134,7 @@ export class TableRenderer {
   }
   
   /**
-   * 渲染分隔符
+   * Render separator
    */
   private renderSeparator(widths: number[]): string {
     const separators = widths.map(width => '-'.repeat(width))
@@ -148,7 +148,7 @@ export class TableRenderer {
   }
   
   /**
-   * 渲染数据行
+   * Render data rows
    */
   private renderRow(row: any, columns: TableColumn[], widths: number[]): string {
     const cells = columns.map((column, i) => {
@@ -168,7 +168,7 @@ export class TableRenderer {
   }
   
   /**
-   * 格式化单元格值
+   * Format cell value
    */
   private formatCellValue(value: any, column: TableColumn): string {
     if (value == null) {
@@ -187,7 +187,7 @@ export class TableRenderer {
   }
   
   /**
-   * 截断文本
+   * Truncate text
    */
   private truncateText(text: string, maxWidth: number): string {
     if (!this.options.truncate || text.length <= maxWidth) {
@@ -202,7 +202,7 @@ export class TableRenderer {
   }
   
   /**
-   * 对齐文本
+   * Align text
    */
   private alignText(text: string, width: number, align: 'left' | 'center' | 'right'): string {
     const padding = width - this.getDisplayWidth(text)
@@ -225,12 +225,12 @@ export class TableRenderer {
   }
   
   /**
-   * 获取显示宽度（处理中文字符）
+   * Get display width (handle Chinese characters)
    */
   private getDisplayWidth(text: string): number {
     let width = 0
     for (const char of text) {
-      // 中文字符占两个显示位置
+      // Chinese characters occupy two display positions
       if (char.match(/[\u4e00-\u9fff]/)) {
         width += 2
       } else {
@@ -242,7 +242,7 @@ export class TableRenderer {
 }
 
 /**
- * 简单表格渲染（快捷方法）
+ * Simple table rendering (shortcut method)
  */
 export function renderTable(data: any[], columns: TableColumn[], options?: TableOptions): string {
   const renderer = new TableRenderer(options)
@@ -250,7 +250,7 @@ export function renderTable(data: any[], columns: TableColumn[], options?: Table
 }
 
 /**
- * 渲染简单列表
+ * Render simple list
  */
 export function renderList(items: string[], options: {
   bullet?: string
@@ -263,7 +263,7 @@ export function renderList(items: string[], options: {
 }
 
 /**
- * 渲染键值对
+ * Render key-value pairs
  */
 export function renderKeyValue(data: Record<string, any>, options: {
   separator?: string
@@ -277,7 +277,7 @@ export function renderKeyValue(data: Record<string, any>, options: {
     return t('table.no_data')
   }
   
-  // 计算键的最大宽度
+  // Calculate maximum key width
   const maxKeyWidth = keyWidth || Math.max(...entries.map(([key]) => key.length))
   
   const lines = entries.map(([key, value]) => {
@@ -290,7 +290,7 @@ export function renderKeyValue(data: Record<string, any>, options: {
 }
 
 /**
- * 渲染进度条
+ * Render progress bar
  */
 export function renderProgressBar(
   current: number, 
@@ -323,7 +323,7 @@ export function renderProgressBar(
 }
 
 /**
- * 格式化文件大小
+ * Format file size
  */
 export function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
@@ -339,7 +339,7 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * 格式化时间差
+ * Format time difference
  */
 export function formatTimeDiff(milliseconds: number): string {
   if (milliseconds < 1000) {
@@ -361,7 +361,7 @@ export function formatTimeDiff(milliseconds: number): string {
 }
 
 /**
- * 格式化相对时间
+ * Format relative time
  */
 export function formatRelativeTime(date: Date): string {
   const now = new Date()

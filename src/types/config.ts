@@ -1,57 +1,57 @@
 /**
- * 配置文件类型定义
+ * Configuration file type definitions
  */
 
-// 仓库配置
+// Repository configuration
 export interface RepoConfig {
-  /** 仓库别名 */
+  /** Repository alias */
   name: string
   /** Git URL */
   git: string
-  /** 分支名 */
+  /** Branch name */
   branch: string
-  /** 本地路径（可选，默认按规则拼接） */
+  /** Local path (optional, default concatenated by rules) */
   path?: string
 }
 
-// 默认配置
+// Default configuration
 export interface DefaultConfig {
-  /** 默认仓库别名 */
+  /** Default repository alias */
   repo: string
-  /** 默认目标目录 */
+  /** Default target directory */
   dest: string
-  /** 默认写入模式 */
+  /** Default write mode */
   mode: 'write' | 'append' | 'merge'
-  /** 默认语言 */
+  /** Default language */
   lang: string
 }
 
-// 项目配置文件 (.ac.yaml)
+// Project configuration file (.ac.yaml)
 export interface ProjectConfig {
-  /** 配置版本 */
+  /** Configuration version */
   version: number
-  /** 仓库列表 */
+  /** Repository list */
   repos: RepoConfig[]
-  /** 默认配置 */
+  /** Default configuration */
   defaults: DefaultConfig
 }
 
-// 全局配置文件 (~/.ac/config.yaml)
+// Global configuration file (~/.ac/config.yaml)
 export interface GlobalConfig {
-  /** 配置版本 */
+  /** Configuration version */
   version: number
-  /** 仓库列表 */
+  /** Repository list */
   repos: RepoConfig[]
-  /** 默认配置 */
+  /** Default configuration */
   defaults: DefaultConfig
 }
 
-// 配置解析结果
+// Configuration resolution result
 export interface ResolvedConfig {
-  /** 配置来源类型 */
+  /** Configuration source type */
   source: 'project' | 'global'
-  /** 配置文件路径 */
+  /** Configuration file path */
   path: string
-  /** 配置内容 */
+  /** Configuration content */
   config: ProjectConfig | GlobalConfig
 }

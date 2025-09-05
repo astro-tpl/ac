@@ -1,5 +1,5 @@
 /**
- * 仓库服务 - 管理模板仓库的增删改查
+ * Repository Service - Manage template repository CRUD operations
  */
 
 import { cloneRepository, updateRepository, getRepositoryInfo } from '../infra/git'
@@ -18,11 +18,11 @@ import { logger, createProgress } from '../infra/logger'
 import { t } from '../i18n'
 
 /**
- * 仓库服务类
+ * Repository Service Class
  */
 export class RepoService {
   /**
-   * 添加仓库
+   * Add repository
    */
   async addRepo(options: {
     gitUrl: string
@@ -35,7 +35,7 @@ export class RepoService {
   }> {
     const { gitUrl, name, branch = 'main', forceGlobal = false } = options
     
-    // 验证 Git URL
+    // Validate Git URL
     if (!isValidGitUrl(gitUrl)) {
       throw new ConfigValidationError(t('error.git.invalid_url', { url: gitUrl }))
     }
@@ -44,23 +44,23 @@ export class RepoService {
     const repoName = name || inferRepoAlias(normalizedUrl)
     const repoPath = getRepoPath(repoName)
     
-    // 解析配置
+    // Resolve configuration
     const resolvedConfig = await configService.resolveConfig({ forceGlobal })
     
-    // 检查仓库是否已存在于配置中
+    // Check if repository already exists in configuration
     const existingRepo = resolvedConfig.config.repos.find(r => r.name === repoName)
     if (existingRepo) {
-      // 仓库已在配置中，检查本地是否存在
+      // Repository exists in config, check if local directory exists
       if (await isDirectory(repoPath)) {
         logger.info(t('repo.add.exists', { name: repoName }))
         return { repo: existingRepo, isNew: false }
       } else {
-        // 配置存在但本地目录不存在，重新克隆
+        // Config exists but local directory doesn't exist, re-clone
         logger.info(t('repo.add.cloning', { alias: repoName, url: normalizedUrl }))
       }
     }
     
-    // 创建仓库配置
+    // Create repository configuration
     const repoConfig: RepoConfig = {
       name: repoName,
       git: normalizedUrl,
@@ -68,11 +68,11 @@ export class RepoService {
     }
     
     try {
-      // 克隆仓库
+      // Clone repository
       logger.info(t('repo.add.cloning', { alias: repoName, url: normalizedUrl }))
       await cloneRepository(normalizedUrl, repoPath, branch)
       
-      // 添加到配置（如果不存在）
+      // Add to configuration (if not exists)
       if (!existingRepo) {
         await configService.addRepoToConfig(resolvedConfig, repoConfig)
         logger.success(t('repo.add.success', { name: repoName }))
@@ -80,10 +80,10 @@ export class RepoService {
         logger.success(t('common.success'))
       }
       
-      // 清除索引缓存，强制重建
+      // Clear index cache, force rebuild
       await indexCache.clearCache()
       
-      // 重建索引以确保缓存是最新的
+      // Rebuild index to ensure cache is up-to-date
       const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
       await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
       logger.info(t('repo.add.index_refreshed'))
@@ -96,7 +96,7 @@ export class RepoService {
   }
   
   /**
-   * 列出所有仓库
+   * List all repositories
    */
   async listRepos(options: {
     forceGlobal?: boolean
@@ -160,7 +160,7 @@ export class RepoService {
   }
   
   /**
-   * 更新仓库
+   * Update repository
    */
   async updateRepo(options: {
     repoName?: string
@@ -176,7 +176,7 @@ export class RepoService {
     
     const resolvedConfig = await configService.resolveConfig({ forceGlobal })
     
-    // 确定要更新的仓库列表
+    // Determine which repositories to update
     const reposToUpdate = repoName 
       ? resolvedConfig.config.repos.filter(r => r.name === repoName)
       : resolvedConfig.config.repos
@@ -201,11 +201,11 @@ export class RepoService {
         const repoPath = getRepoPath(repo.name)
         
         if (!await isDirectory(repoPath)) {
-          // 仓库不存在，重新克隆
+          // Repository doesn't exist, re-clone
           logger.debug(t('repo.list.status.not_exists'))
           await cloneRepository(repo.git, repoPath, repo.branch)
         } else {
-          // 更新现有仓库
+          // Update existing repository
           await updateRepository(repoPath, repo.branch)
         }
         
@@ -222,10 +222,10 @@ export class RepoService {
     
     progress.complete(t('repo.update.success', { success: results.filter(r => r.success).length, total: results.length }))
     
-    // 清除索引缓存，强制重建
+    // Clear index cache, force rebuild
     await indexCache.clearCache()
     
-    // 重建索引以确保缓存是最新的
+    // Rebuild index to ensure cache is up-to-date
     const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
     await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
     
@@ -233,7 +233,7 @@ export class RepoService {
   }
   
   /**
-   * 移除仓库
+   * Remove repository
    */
   async removeRepo(options: {
     repoName: string
@@ -247,7 +247,7 @@ export class RepoService {
     
     const resolvedConfig = await configService.resolveConfig({ forceGlobal })
     
-    // 检查仓库是否存在
+    // Check if repository exists
     const repo = resolvedConfig.config.repos.find(r => r.name === repoName)
     if (!repo) {
       throw new RepoNotFoundError(t('repo.remove.notfound', { alias: repoName }))
@@ -257,12 +257,12 @@ export class RepoService {
     let removedLocalDir = false
     
     try {
-      // 从配置中移除
+      // Remove from configuration
       await configService.removeRepoFromConfig(resolvedConfig, repoName)
       removedFromConfig = true
       logger.success(t('repo.remove.success_config', { name: repoName }))
       
-      // 移除本地目录（如果请求）
+      // Remove local directory (if requested)
       if (removeLocal) {
         const repoPath = getRepoPath(repoName)
         if (await isDirectory(repoPath)) {
@@ -272,10 +272,10 @@ export class RepoService {
         }
       }
       
-      // 清除索引缓存
+      // Clear index cache
       await indexCache.clearCache()
       
-      // 重建索引以确保缓存是最新的
+      // Rebuild index to ensure cache is up-to-date
       const resolvedConfigForIndex = await configService.resolveConfig({ forceGlobal })
       await rebuildTemplateIndex(resolvedConfigForIndex.config.repos)
       
@@ -289,7 +289,7 @@ export class RepoService {
   }
   
   /**
-   * 获取仓库详细信息
+   * Get repository detailed information
    */
   async getRepoInfo(repoName: string, options: {
     forceGlobal?: boolean
@@ -333,7 +333,7 @@ export class RepoService {
         hasUncommittedChanges: repoInfo.hasUncommittedChanges
       }
     } catch (error: any) {
-      logger.debug(`获取仓库状态失败 ${repoName}: ${error.message}`)
+      logger.debug(t('repo.debug.status_failed', { name: repoName, error: error.message }))
     }
     
     return {
@@ -344,7 +344,7 @@ export class RepoService {
   }
   
   /**
-   * 验证所有仓库的完整性
+   * Validate integrity of all repositories
    */
   async validateRepos(options: {
     forceGlobal?: boolean
@@ -369,19 +369,19 @@ export class RepoService {
         valid.push(repo.name)
       } else {
         const error = !repo.status?.exists 
-          ? '本地目录不存在' 
-          : '不是有效的 Git 仓库'
+          ? t('repo.validation.local_not_exists') 
+          : t('repo.validation.invalid_git_repo')
         
         let fixed = false
         
         if (autoFix) {
           try {
-            logger.info(`正在修复仓库: ${repo.name}`)
+            logger.info(t('repo.validation.fixing_repo', { name: repo.name }))
             await cloneRepository(repo.git, repo.localPath, repo.branch)
             valid.push(repo.name)
             fixed = true
           } catch (fixError: any) {
-            logger.warn(`修复仓库失败 ${repo.name}: ${fixError.message}`)
+            logger.warn(t('repo.validation.fix_failed', { name: repo.name, error: fixError.message }))
           }
         }
         
@@ -397,5 +397,5 @@ export class RepoService {
   }
 }
 
-// 全局仓库服务实例
+// Global repository service instance
 export const repoService = new RepoService()
