@@ -1,6 +1,6 @@
 {
   "name": "@astro-tpl/ac",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "type": "module",
   "publishConfig": {
     "access": "public"
@@ -69,7 +69,7 @@
       "@oclif/plugin-update"
     ],
     "topicSeparator": " ",
-    "topics": { }
+    "topics": {}
   },
   "scripts": {
     "build": "tsc -b && tsc-alias --resolve-full-paths --resolve-full-extension .js && cp -r src/i18n/*.json dist/i18n/",
